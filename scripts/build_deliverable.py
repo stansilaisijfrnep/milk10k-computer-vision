@@ -1,9 +1,9 @@
 """Build the Session 1 homework deliverable PDF.
 
-The brief asks for a PDF with two things: the link to the public GitHub repo
-with the EDA code, and a screenshot of the code editor showing the project
-structure. Plus the short explanation of the clinical task. That is all this
-makes -- the EDA itself, the figures and the full write-up live in the repo.
+The brief asks for a PDF with the link to the public GitHub repo holding the
+EDA code, and a screenshot of the code editor showing the project structure.
+Plus a short explanation of the clinical task. This keeps the text to bullet
+points and shows the work through screenshots and plots instead.
 
 Usage:
     python scripts/build_deliverable.py
@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+FIG = ROOT / "reports" / "figures"
 SHOT = ROOT / "reports" / "screenshots"
 OUT_HTML = ROOT / "reports" / "session1_deliverable.html"
 OUT_PDF = ROOT / "reports" / "Session1_MILK10k_EDA_Stanislaus_Lattorff.pdf"
@@ -36,32 +37,43 @@ def embed(path: Path) -> str:
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
+def figure(path: Path, caption: str, cls: str = "wide") -> str:
+    return f"""
+<figure class="{cls}">
+  <img src="{embed(path)}" alt="{caption}">
+  <figcaption>{caption}</figcaption>
+</figure>"""
+
+
 CSS = """
-@page { size: A4; margin: 20mm 18mm; }
+@page { size: A4; margin: 18mm 16mm; }
 * { box-sizing: border-box; }
 body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 10.5pt; line-height: 1.55; color: #1F1F1F; margin: 0;
+  font-size: 10.5pt; line-height: 1.5; color: #1F1F1F; margin: 0;
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
 h1 { font-size: 15pt; margin: 0 0 2pt; }
-h2 { font-size: 11.5pt; margin: 18pt 0 6pt; }
-p  { margin: 0 0 9pt; }
-ul { margin: 0 0 9pt; padding-left: 16pt; }
-li { margin-bottom: 6pt; }
+h2 { font-size: 11.5pt; margin: 16pt 0 6pt; }
+p  { margin: 0 0 8pt; }
+ul { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin-bottom: 5pt; }
 code { font-family: Menlo, Consolas, monospace; font-size: 9.5pt; }
 a { color: #14509B; }
 
-.head { border-bottom: 1pt solid #BBB; padding-bottom: 8pt; margin-bottom: 14pt; }
+.head { border-bottom: 1pt solid #BBB; padding-bottom: 8pt; margin-bottom: 12pt; }
 .head .sub { color: #555; font-size: 10pt; }
 
-.repo { border: 1pt solid #CCC; padding: 10pt 12pt; margin: 4pt 0 4pt; background: #FAFAFA; }
+.repo { border: 1pt solid #CCC; padding: 9pt 12pt; margin: 4pt 0; background: #FAFAFA; }
 .repo .lbl { font-size: 9pt; color: #555; margin-bottom: 3pt; }
 .repo a { font-size: 11pt; word-break: break-all; }
 
-figure { margin: 0 0 12pt; page-break-inside: avoid; }
-figure img { width: 82%; border: 1pt solid #CCC; display: block; }
-figcaption { font-size: 9pt; color: #555; margin-top: 4pt; }
+figure { margin: 0 0 10pt; page-break-inside: avoid; }
+figure img { border: 1pt solid #CCC; display: block; }
+figure.wide img  { width: 75%; }
+figure.shot img  { width: 76%; }
+figure.tall img  { width: 34%; }
+figcaption { font-size: 9pt; color: #555; margin-top: 3pt; }
 
 .pagebreak { page-break-before: always; }
 """
@@ -78,99 +90,109 @@ def build_html() -> str:
 </div>
 
 <h2>GitHub repository</h2>
-
 <div class="repo">
   <div class="lbl">Public repository (my personal account):</div>
   <a href="{REPO_URL}">{REPO_URL}</a>
 </div>
-
-<p>The EDA notebook is at <code>notebooks/01_eda_milk10k.ipynb</code>. It is saved with all
-the outputs so the plots are visible on GitHub without running anything. The code it uses is
-in <code>src/milk10k/</code> and the figures it produces are in <code>reports/figures/</code>.
-The dataset is not in the repo (345 MB and CC BY-NC), so there is a script
-<code>scripts/download_data.sh</code> that downloads it from ISIC.</p>
+<ul>
+  <li>EDA notebook: <code>notebooks/01_eda_milk10k.ipynb</code>, saved with all outputs so the
+  plots show on GitHub without running it.</li>
+  <li>Code it uses: <code>src/milk10k/</code>. Figures it produces: <code>reports/figures/</code>.</li>
+  <li>Dataset is not in the repo (345 MB, CC BY-NC) — <code>scripts/download_data.sh</code>
+  pulls it from ISIC.</li>
+</ul>
 
 <h2>The clinical task</h2>
-
-<p>MILK10k contains photos of skin lesions from patients who were sent to a dermatologist.
-Every lesion was photographed twice: once as a normal close-up photo, and once through a
-dermatoscope, which is a lens with polarised light that makes structures below the skin
-surface visible. Almost all of these lesions were then biopsied, so the labels come from a
-pathologist looking at the tissue under a microscope rather than from someone's opinion.</p>
-
-<p>The task is to predict from the images whether a lesion is benign, malignant or
-indeterminate (the <code>diagnosis_1</code> column). There is also a more detailed 11-class
-version of the label as an optional target.</p>
-
-<p>Why this matters is mostly about timing. A skin cancer that is found early is usually
-removed in a small operation and that is the end of it. The same cancer found late is a much
-bigger problem, and for melanoma it can be fatal. So the model is a triage tool. It should
-almost never call something benign when it is actually cancer. Missing a melanoma is much
-worse than doing one unnecessary biopsy, so the number I care about is recall on the
-malignant class, not accuracy.</p>
-
-<p>One thing I think is important to say clearly: this dataset only contains lesions that a
-doctor already found suspicious enough to biopsy. 69% of them are malignant, which is nothing
-like the general population, where almost everything you look at is a harmless mole. So a
-model trained on this data is really answering "given that a specialist was already worried
-about this lesion, is it cancer?" and not "is this cancer?". It would not work as a phone app
-for the public. A longer version of this is in <code>docs/clinical_task.md</code> in the repo.</p>
+<ul>
+  <li>Photos of skin lesions from patients who were sent to a dermatologist.</li>
+  <li>Each lesion is photographed twice: a normal close-up, and one through a dermatoscope
+  (a lens with polarised light that shows structures below the skin surface).</li>
+  <li>Almost all lesions were biopsied afterwards, so the labels come from a pathologist and
+  not from someone's opinion.</li>
+  <li>Task: predict benign / malignant / indeterminate from the image
+  (<code>diagnosis_1</code>). There is a finer 11-class label as an optional target.</li>
+  <li>It is a triage tool. Skin cancer found early is removed in a small operation; found
+  late it is a much bigger problem and melanoma can be fatal.</li>
+  <li>So missing a cancer is far worse than doing one unnecessary biopsy. The number that
+  matters is recall on the malignant class, not accuracy.</li>
+  <li>Important caveat: the dataset only has lesions a doctor already found suspicious enough
+  to biopsy. 69% are malignant, nothing like the general population. A model trained here
+  answers "given a specialist was already worried, is this cancer?" — not "is this cancer?".</li>
+</ul>
 
 <h2>What I did</h2>
-
 <ul>
-  <li>Downloaded the full dataset (10,480 images, 5,240 lesions) and loaded
-  <code>metadata.csv</code> and <code>training_gt.csv</code> with pandas.</li>
-  <li>Checked the structure rather than assuming it. Every lesion does have exactly two
-  images, one of each type, and the 11-class labels are single-label.</li>
-  <li>Plotted the class distribution for both targets, the missing values, age, sex, body
-  site, skin tone, and the image sizes and colour statistics.</li>
-  <li>Looked at the actual images: one example per class, and pairs of the same lesion in
-  both modalities.</li>
+  <li>Downloaded the full dataset: 10,480 images, 5,240 lesions.</li>
+  <li>Loaded <code>metadata.csv</code> and <code>training_gt.csv</code> with pandas.</li>
+  <li>Checked the structure instead of assuming it.</li>
+  <li>Plotted class distribution, missing values, age, sex, body site, skin tone, image sizes
+  and colour statistics.</li>
+  <li>Looked at the actual images, per class and per lesion.</li>
 </ul>
-
-<h2>A few things I noticed</h2>
-
-<ul>
-  <li>The dataset is 69.4% malignant. Predicting "malignant" for everything already gives
-  69.4% accuracy, so accuracy on its own does not tell you anything here.</li>
-  <li>Since every lesion has two images, a random split by row can put both images of the
-  same lesion on opposite sides of train and test. Then the model has basically already seen
-  the test case. The split has to group by <code>lesion_id</code>.</li>
-  <li>The 11-class target is very unbalanced. BCC has 2,522 lesions and MAL_OTH has 9.</li>
-  <li>AKIEC does not map to one single value of <code>diagnosis_1</code>. It is split between
-  Indeterminate (123) and Malignant (180), so I cannot just translate the 11-class label into
-  the 3-class one with a lookup table.</li>
-  <li>61% of the lesions are one skin tone class. If I only report the overall score I will
-  not see how the model does on the tones that are rare in the data.</li>
-</ul>
-
-<h2>Editor</h2>
-
-<p>I am using Visual Studio Code. Screenshots of the project on the next page.</p>
 
 <div class="pagebreak"></div>
 
 <h2>Code editor with the project structure</h2>
+<p>I am using Visual Studio Code.</p>
+{figure(SHOT / "vscode_eda_notebook.png",
+        "Folder structure on the left, the EDA notebook open.", cls="shot")}
+{figure(SHOT / "vscode_project_structure.png",
+        "Same project with src/milk10k/data.py open — the loading and structure checks.",
+        cls="shot")}
 
-<figure>
-  <img src="{embed(SHOT / 'vscode_eda_notebook.png')}" alt="VS Code with the project structure">
-  <figcaption>The project in VS Code. Folder structure on the left, the EDA notebook open.</figcaption>
-</figure>
+<div class="pagebreak"></div>
 
-<figure>
-  <img src="{embed(SHOT / 'vscode_project_structure.png')}" alt="VS Code with the source code">
-  <figcaption>The same project with <code>src/milk10k/data.py</code> open, which is where the
-  loading and the structure checks are.</figcaption>
-</figure>
+<h2>What the EDA showed</h2>
+<ul>
+  <li>69.4% of lesions are malignant. Always predicting "malignant" gives 69.4% accuracy, so
+  accuracy alone says nothing.</li>
+  <li>Every lesion has exactly two images. A random split by row can put both on opposite
+  sides of train and test, so the split has to group by <code>lesion_id</code>.</li>
+  <li>The 11-class target is very unbalanced: BCC has 2,522 lesions, MAL_OTH has 9.</li>
+  <li>AKIEC is split between Indeterminate (123) and Malignant (180), so the 11-class label
+  cannot be translated into the 3-class one with a lookup table.</li>
+  <li>61% of lesions are a single skin tone class.</li>
+  <li>Median age is 65 and 60% are men — a specialist clinic population, not the general
+  public.</li>
+  <li>Images are not all the same size, so they need resizing before training.</li>
+</ul>
+
+{figure(FIG / "fig01_class_distribution_primary.png",
+        "The 3-class target. Malignant dominates — the opposite of the general population.")}
+{figure(FIG / "fig02_class_distribution_11.png",
+        "The 11-class target, log scale. 280:1 between the largest and smallest class.")}
+
+<div class="pagebreak"></div>
+
+<h2>The images</h2>
+{figure(FIG / "fig10_class_gallery.png",
+        "One dermoscopic example per class. BCC, the most common cancer here, is often just "
+        "a pale pink patch, while a benign mole looks more dramatic.")}
+{figure(FIG / "fig11_lesion_pairs.png",
+        "The same lesion in both modalities. This is why the split has to group by lesion_id.",
+        cls="tall")}
+
+<h2>Who is in the data</h2>
+{figure(FIG / "fig07_skin_tone.png",
+        "Skin tone sampling and malignancy rate. One class is 61% of the data, so overall "
+        "scores would hide how the model does on the rare tones.")}
 
 </body></html>"""
 
 
 def main() -> None:
-    for required in [SHOT / "vscode_eda_notebook.png", SHOT / "vscode_project_structure.png"]:
-        if not required.exists():
-            raise SystemExit(f"Missing screenshot: {required}")
+    required = [
+        SHOT / "vscode_eda_notebook.png",
+        SHOT / "vscode_project_structure.png",
+        FIG / "fig01_class_distribution_primary.png",
+        FIG / "fig02_class_distribution_11.png",
+        FIG / "fig07_skin_tone.png",
+        FIG / "fig10_class_gallery.png",
+        FIG / "fig11_lesion_pairs.png",
+    ]
+    for path in required:
+        if not path.exists():
+            raise SystemExit(f"Missing image: {path}\nRun scripts/run_eda.py first.")
 
     OUT_HTML.write_text(build_html())
     print(f"Wrote {OUT_HTML} ({OUT_HTML.stat().st_size / 1024:.0f} KB)")
