@@ -34,6 +34,8 @@ it cancer?"* — because the dataset is 69% malignant by referral bias, not by n
 | 15 figures | [`reports/figures/`](reports/figures/) |
 | Summary tables (CSV) | [`reports/tables/`](reports/tables/) |
 | Clinical task explanation | [`docs/clinical_task.md`](docs/clinical_task.md) |
+| **Submitted PDF deliverable** | [`reports/Session1_MILK10k_EDA_Stanislaus_Lattorff.pdf`](reports/Session1_MILK10k_EDA_Stanislaus_Lattorff.pdf) |
+| Editor screenshots | [`reports/screenshots/`](reports/screenshots/) |
 
 ### Nine findings that change the pipeline
 
