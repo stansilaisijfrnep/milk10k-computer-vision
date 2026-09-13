@@ -1,0 +1,9 @@
+check,passed,detail
+Every lesion has exactly 2 images,True,"5,240 / 5,240 lesions"
+Each lesion has 2 distinct image types,True,"5,240 / 5,240 lesions"
+isic_id is unique,True,"10,480 unique / 10,480 rows"
+No duplicated image rows,True,0 duplicates
+'diagnosis_1' is constant within a lesion,True,0 lesions vary
+'label_11' is constant within a lesion,True,0 lesions vary
+'age_approx' is constant within a lesion,True,0 lesions vary
+'sex' is constant within a lesion,True,0 lesions vary

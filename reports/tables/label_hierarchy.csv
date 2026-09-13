@@ -1,0 +1,12 @@
+label_11,Benign,Malignant,Indeterminate
+BCC,0,2522,0
+NV,746,0,0
+BKL,544,0,0
+SCCKA,0,473,0
+MEL,0,450,0
+AKIEC,0,180,123
+DF,52,0,0
+INF,50,0,0
+VASC,47,0,0
+BEN_OTH,44,0,0
+MAL_OTH,0,9,0
