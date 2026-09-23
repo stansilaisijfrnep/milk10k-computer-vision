@@ -89,7 +89,10 @@ CROP_ASPECT_RANGE = (NATIVE_ASPECT_RATIO * 0.9, NATIVE_ASPECT_RATIO / 0.9)
 # benign and malignant lesions; the jitter has to stay well below it, otherwise
 # augmentation moves an image across the very boundary the model is learning. A
 # hue jitter of 0.5 (180 degrees) turns skin green and is indefensible here.
-JITTER_BRIGHTNESS = 0.2
+# Brightness was 0.2 until A3.5 measured it: a 0.2 shift moved mean lesion V by
+# 83% of the whole Benign/Malignant V gap and by ~0.75-1 within-class standard
+# deviation, so it was tightened to 0.1. Hue 0.02 (~7 degrees) passed the audit.
+JITTER_BRIGHTNESS = 0.1
 JITTER_CONTRAST = 0.2
 JITTER_SATURATION = 0.1
 JITTER_HUE = 0.02
@@ -239,7 +242,9 @@ AUGMENTATION_TABLE: list[dict] = [
         "justification": (
             "Illumination, white balance and camera model differ between the "
             "clinics that contributed MILK10k, so small photometric shifts are "
-            "acquisition noise; hue is capped at 0.02 (about 7 degrees) because "
+            "acquisition noise; hue is capped at 0.02 (about 7 degrees) and "
+            "brightness at 0.1 (0.2 was measured in A3.5 to move a lesion by 83% "
+            "of the benign/malignant brightness gap) because "
             "pigmentation and erythema are themselves the diagnosis and a "
             "larger shift would move a lesion across the benign/malignant "
             "colour gap that exercise A3.5 measures."
