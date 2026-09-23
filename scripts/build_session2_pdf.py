@@ -33,10 +33,11 @@ PAGE_LIMIT = 4
 CSS = """
 @page { size: A4; margin: 9mm 11mm; }
 body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-       font-size: 8.2pt; line-height: 1.3; color: #222; }
+       font-size: 8.0pt; line-height: 1.27; color: #222; }
 h1 { font-size: 13pt; margin: 0 0 3px; }
 h2 { font-size: 10pt; margin: 6px 0 2px; color: #b35f00;
      border-bottom: 1px solid #e6e6e6; padding-bottom: 1px; }
+h3 { font-size: 8.8pt; margin: 5px 0 1px; color: #333; page-break-after: avoid; }
 p, li { margin: 2px 0; }
 ul { margin: 2px 0; padding-left: 14px; }
 table { border-collapse: collapse; margin: 3px 0; font-size: 7.4pt; width: 100%; }
@@ -44,7 +45,7 @@ th, td { border: 1px solid #ddd; padding: 1.2px 4px; text-align: left; vertical-
 th { background: #f4f4f4; }
 code { font-size: 7.4pt; background: #f5f5f5; padding: 0 2px; border-radius: 2px; }
 pre { background: #f7f7f7; border: 1px solid #e3e3e3; padding: 3px 6px; margin: 3px 0;
-      font-size: 6.9pt; line-height: 1.25; white-space: pre-wrap; }
+      font-size: 6.9pt; line-height: 1.25; white-space: pre-wrap; page-break-inside: avoid; }
 pre code { background: none; padding: 0; font-size: 6.9pt; }
 a { color: #1a5fb4; text-decoration: none; }
 img { display: block; margin: 3px auto; max-width: 100%; page-break-inside: avoid; }
@@ -52,16 +53,16 @@ img { display: block; margin: 3px auto; max-width: 100%; page-break-inside: avoi
 
 # Width per figure, as a share of the text width: wide grids get more room.
 FIG_WIDTH = {
-    "fig16_association_ranking.png": "56%",
-    "fig17_class_mix_by_field.png": "52%",
-    "fig18_age_by_class.png": "66%",
-    "fig19_gray_hist_by_class.png": "80%",
-    "fig20_rgb_hist_by_class.png": "70%",
-    "fig21_color_stats_by_class.png": "92%",
-    "fig22_raw_vs_processed.png": "46%",
-    "fig23_loader_batch.png": "100%",
-    "fig24_batch_summary.png": "64%",
-    "fig25_class_balance.png": "50%",
+    "fig16_association_ranking.png": "48%",
+    "fig17_class_mix_by_field.png": "44%",
+    "fig18_age_by_class.png": "60%",
+    "fig19_gray_hist_by_class.png": "70%",
+    "fig20_rgb_hist_by_class.png": "62%",
+    "fig21_color_stats_by_class.png": "86%",
+    "fig22_raw_vs_processed.png": "40%",
+    "fig23_loader_batch.png": "82%",
+    "fig24_batch_summary.png": "58%",
+    "fig25_class_balance.png": "46%",
 }
 
 
