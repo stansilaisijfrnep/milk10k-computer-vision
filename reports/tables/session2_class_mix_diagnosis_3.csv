@@ -1,0 +1,30 @@
+diagnosis_3,Benign,Indeterminate,Malignant,n
+(missing),88.6,0.0,11.4,79
+Angiokeratoma,100.0,0.0,0.0,7
+Basal cell carcinoma,0.0,0.0,100.0,2522
+Clear cell acanthoma,100.0,0.0,0.0,4
+Dermatofibroma,100.0,0.0,0.0,52
+Hemangioma,100.0,0.0,0.0,34
+Infundibular or epidermal cyst,100.0,0.0,0.0,2
+Ink-spot lentigo,100.0,0.0,0.0,2
+Juvenile xanthogranuloma,100.0,0.0,0.0,3
+Keratoacanthoma,0.0,0.0,100.0,162
+Lichen planus like keratosis,100.0,0.0,0.0,135
+Mastocytosis,100.0,0.0,0.0,2
+Melanoma Invasive,0.0,0.0,100.0,255
+Melanoma in situ,0.0,0.0,100.0,181
+Melanoma metastasis,0.0,0.0,100.0,14
+Molluscum,100.0,0.0,0.0,1
+Mucosal melanotic macule,100.0,0.0,0.0,7
+Nevus,100.0,0.0,0.0,746
+Porokeratosis,100.0,0.0,0.0,3
+Pyogenic granuloma,100.0,0.0,0.0,6
+Sebaceous hyperplasia,100.0,0.0,0.0,2
+Seborrheic keratosis,100.0,0.0,0.0,340
+Solar lentigo,100.0,0.0,0.0,63
+Solar or actinic keratosis,0.0,100.0,0.0,123
+Squamous cell carcinoma in situ,0.0,0.0,100.0,180
+"Squamous cell carcinoma, Invasive",0.0,0.0,100.0,311
+Supernumerary nipple,100.0,0.0,0.0,1
+Trichoblastoma,100.0,0.0,0.0,3
+(all),28.3,2.3,69.4,5240

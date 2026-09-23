@@ -1,0 +1,18 @@
+diagnosis_4,Benign,Indeterminate,Malignant,n
+(missing),20.1,2.7,77.1,4479
+Blue nevus,100.0,0.0,0.0,31
+"Hemangioma, Hobnail",100.0,0.0,0.0,1
+"Nevus, Acral",100.0,0.0,0.0,36
+"Nevus, BAP-1 deficient",100.0,0.0,0.0,2
+"Nevus, Balloon cell",100.0,0.0,0.0,1
+"Nevus, Combined",100.0,0.0,0.0,18
+"Nevus, Congenital",100.0,0.0,0.0,61
+"Nevus, NOS, Compound",100.0,0.0,0.0,203
+"Nevus, NOS, Dermal",100.0,0.0,0.0,66
+"Nevus, NOS, Junctional",100.0,0.0,0.0,106
+"Nevus, Recurrent or persistent",100.0,0.0,0.0,8
+"Nevus, Reed",100.0,0.0,0.0,32
+"Nevus, Spilus",100.0,0.0,0.0,3
+"Nevus, Spitz",100.0,0.0,0.0,13
+"Squamous cell carcinoma in situ, Bowens disease",0.0,0.0,100.0,180
+(all),28.3,2.3,69.4,5240

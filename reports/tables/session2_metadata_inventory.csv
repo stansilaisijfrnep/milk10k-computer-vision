@@ -1,0 +1,16 @@
+column,type,n_unique,n_missing,pct_missing,unit,role,why
+attribution,constant,1,0,0.0,lesion,constant,one value for all rows
+copyright_license,constant,1,0,0.0,lesion,constant,one value for all rows
+age_approx,numeric,17,40,0.38,lesion,usable,patient age at capture; known before any biopsy
+anatom_site_general,categorical,4,3912,37.33,lesion,usable,"body site; 37% missing, so the gap itself needs care"
+anatom_site_special,categorical,2,10274,98.03,lesion,usable,98% missing; the few values are acral / oral-genital
+concomitant_biopsy,boolean,2,0,0.0,lesion,leakage,identical to diagnosis_confirm_type (perfect 1:1 cross-tab)
+diagnosis_2,categorical,19,0,0.0,lesion,leakage,finer level of the diagnosis hierarchy — contains the label
+diagnosis_3,categorical,27,158,1.51,lesion,leakage,finer level of the diagnosis hierarchy — contains the label
+diagnosis_4,categorical,15,8958,85.48,lesion,leakage,finer level of the diagnosis hierarchy — contains the label
+diagnosis_confirm_type,categorical,2,0,0.0,lesion,leakage,biopsied or not — decided because of clinical suspicion
+image_manipulation,categorical,2,0,0.0,image,acquisition,"how the photo was taken/edited — a shortcut, not biology"
+image_type,categorical,2,0,0.0,image,acquisition,imaging modality; every lesion has one of each
+lesion_id,identifier,5240,0,0.0,lesion,grouping,"identifier of the lesion — used to split, never as an input"
+melanocytic,boolean (present/missing),1,8088,77.18,lesion,leakage,only recorded for melanocytic lesions — its presence names the family
+sex,categorical,2,0,0.0,lesion,usable,patient sex; known before any biopsy

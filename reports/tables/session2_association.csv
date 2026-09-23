@@ -1,0 +1,16 @@
+field,role,unit,n,test,effect_measure,effect,statistic,dof,p_value,levels,min_expected,pct_cells_expected_lt5,chi2_reliable,eta_squared,kruskal_H,kruskal_p
+diagnosis_2,leakage,lesion,5240.0,chi-square,Cramer's V,1.0,10480.0,36.0,0.0,19.0,0.023473282442748093,54.4,False,,,
+diagnosis_3,leakage,lesion,5240.0,chi-square,Cramer's V,0.9981052389566977,10440.323432983814,54.0,0.0,28.0,0.023473282442748093,59.5,False,,,
+melanocytic,leakage,lesion,5240.0,chi-square,Cramer's V,0.41374518216911216,897.0097970251155,2.0,1.6473939602409302e-195,2.0,28.07404580152672,0.0,True,,,
+diagnosis_4,leakage,lesion,5240.0,chi-square,Cramer's V,0.40262368879083305,1698.869148447634,30.0,0.0,16.0,0.023473282442748093,52.1,False,,,
+age_approx,usable,lesion,5220.0,one-way ANOVA (+ Kruskal-Wallis),eta (sqrt of eta^2),0.3898017177500749,467.3632002017398,2.0,1.96583534653155e-187,3.0,,,,0.15194537916090906,586.224816387774,5.045434168907057e-128
+concomitant_biopsy,leakage,lesion,5240.0,chi-square,Cramer's V,0.3111160606096514,507.19638460696575,2.0,7.306417114976129e-111,2.0,5.258015267175573,0.0,True,,,
+diagnosis_confirm_type,leakage,lesion,5240.0,chi-square,Cramer's V,0.31111606060965136,507.1963846069657,2.0,7.306417114976337e-111,2.0,5.258015267175573,0.0,True,,,
+anatom_site_general,usable,lesion,5240.0,chi-square,Cramer's V,0.1574932816329839,259.9473217998365,8.0,1.3385458752903163e-51,5.0,0.18778625954198475,13.3,False,,,
+image_manipulation,acquisition,image,10480.0,chi-square,Cramer's V,0.13882745849852046,201.98170268350026,2.0,1.3811172181237624e-44,2.0,7.863549618320611,0.0,True,,,
+sex,usable,lesion,5240.0,chi-square,Cramer's V,0.0933338268294969,45.64670492854582,2.0,1.2244582063945075e-10,2.0,49.012213740458016,0.0,True,,,
+anatom_site_special,usable,lesion,5240.0,chi-square,Cramer's V,0.06460628581220507,43.7432283043785,4.0,7.253965390507668e-09,3.0,0.18778625954198475,33.3,False,,,
+image_type,acquisition,image,10480.0,chi-square,Cramer's V,0.0,0.0,2.0,1.0,2.0,123.0,0.0,True,,,
+attribution,constant,lesion,,none (constant),,,,,,,,,,,,
+copyright_license,constant,lesion,,none (constant),,,,,,,,,,,,
+lesion_id,grouping,lesion,,none (identifier),,,,,,,,,,,,

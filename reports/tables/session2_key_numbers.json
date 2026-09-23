@@ -1,0 +1,244 @@
+{
+  "part1": {
+    "n_images": 10480,
+    "n_lesions": 5240,
+    "ranking": [
+      {
+        "field": "diagnosis_2",
+        "role": "leakage",
+        "unit": "lesion",
+        "effect": 1.0,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "diagnosis_3",
+        "role": "leakage",
+        "unit": "lesion",
+        "effect": 0.998,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "melanocytic",
+        "role": "leakage",
+        "unit": "lesion",
+        "effect": 0.414,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "diagnosis_4",
+        "role": "leakage",
+        "unit": "lesion",
+        "effect": 0.403,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "age_approx",
+        "role": "usable",
+        "unit": "lesion",
+        "effect": 0.39,
+        "effect_measure": "eta (sqrt of eta^2)"
+      },
+      {
+        "field": "concomitant_biopsy",
+        "role": "leakage",
+        "unit": "lesion",
+        "effect": 0.311,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "diagnosis_confirm_type",
+        "role": "leakage",
+        "unit": "lesion",
+        "effect": 0.311,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "anatom_site_general",
+        "role": "usable",
+        "unit": "lesion",
+        "effect": 0.157,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "image_manipulation",
+        "role": "acquisition",
+        "unit": "image",
+        "effect": 0.139,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "sex",
+        "role": "usable",
+        "unit": "lesion",
+        "effect": 0.093,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "anatom_site_special",
+        "role": "usable",
+        "unit": "lesion",
+        "effect": 0.065,
+        "effect_measure": "Cramer's V"
+      },
+      {
+        "field": "image_type",
+        "role": "acquisition",
+        "unit": "image",
+        "effect": 0.0,
+        "effect_measure": "Cramer's V"
+      }
+    ],
+    "age": {
+      "field": "age_approx",
+      "test": "one-way ANOVA (+ Kruskal-Wallis)",
+      "n": 5220,
+      "levels": 3,
+      "statistic": 467.3632002017398,
+      "dof": 2,
+      "p_value": 1.96583534653155e-187,
+      "effect": 0.3898017177500749,
+      "effect_measure": "eta (sqrt of eta^2)",
+      "eta_squared": 0.15194537916090906,
+      "kruskal_H": 586.224816387774,
+      "kruskal_p": 5.045434168907057e-128
+    },
+    "melanocytic_present_codes": [
+      "MEL",
+      "NV"
+    ],
+    "clinical_assessment_malignant_pct": 2.2,
+    "clinical_assessment_n": 224,
+    "altered_indeterminate_pct": 12.8,
+    "overall_indeterminate_pct_images": 2.3,
+    "images_varying_within_lesion": {
+      "image_manipulation": 327,
+      "image_type": 5240
+    }
+  },
+  "part2": {
+    "n_per_class_lesions": 120,
+    "n_images": 720,
+    "eta2_within": {
+      "mean_r": 0.0622,
+      "mean_g": 0.1478,
+      "mean_b": 0.1071,
+      "std_r": 0.1083,
+      "std_g": 0.0624,
+      "std_b": 0.0616,
+      "mean_gray": 0.1246,
+      "std_gray": 0.0797,
+      "r_over_g": 0.131
+    },
+    "eta2_pooled": {
+      "mean_r": 0.0238,
+      "mean_g": 0.0987,
+      "mean_b": 0.0455,
+      "std_r": 0.0484,
+      "std_g": 0.0291,
+      "std_b": 0.0293,
+      "mean_gray": 0.071,
+      "std_gray": 0.0376,
+      "r_over_g": 0.1014
+    },
+    "max_eta2_feature": "mean_g",
+    "max_eta2": 0.1478,
+    "modality_eta2": {
+      "mean_r": 0.006,
+      "mean_g": 0.042,
+      "mean_b": 0.298,
+      "mean_gray": 0.033
+    },
+    "mean_gray_by_modality_class": {
+      "clinical: close-up": {
+        "Benign": 145.2,
+        "Indeterminate": 126.9,
+        "Malignant": 140.4
+      },
+      "dermoscopic": {
+        "Benign": 148.4,
+        "Indeterminate": 139.8,
+        "Malignant": 148.1
+      }
+    },
+    "classifier": [
+      {
+        "modality": "dermoscopic",
+        "n_images": 360,
+        "balanced_accuracy": 0.472,
+        "fold_std": 0.026,
+        "chance": 0.333
+      },
+      {
+        "modality": "clinical: close-up",
+        "n_images": 360,
+        "balanced_accuracy": 0.556,
+        "fold_std": 0.018,
+        "chance": 0.333
+      }
+    ],
+    "confounders": {
+      "Benign": {
+        "skin tone 0 (unknown/other) %": 0.8,
+        "skin tone I %": 0.8,
+        "skin tone II %": 18.3,
+        "skin tone III %": 52.5,
+        "skin tone IV %": 24.2,
+        "skin tone V %": 3.3,
+        "head/neck %": 20.0,
+        "site missing %": 40.8,
+        "altered images %": 4.6
+      },
+      "Indeterminate": {
+        "skin tone 0 (unknown/other) %": 0.0,
+        "skin tone I %": 15.0,
+        "skin tone II %": 13.3,
+        "skin tone III %": 58.3,
+        "skin tone IV %": 11.7,
+        "skin tone V %": 1.7,
+        "head/neck %": 80.0,
+        "site missing %": 5.8,
+        "altered images %": 17.5
+      },
+      "Malignant": {
+        "skin tone 0 (unknown/other) %": 0.0,
+        "skin tone I %": 0.0,
+        "skin tone II %": 10.8,
+        "skin tone III %": 60.8,
+        "skin tone IV %": 21.7,
+        "skin tone V %": 6.7,
+        "head/neck %": 27.5,
+        "site missing %": 34.2,
+        "altered images %": 2.1
+      }
+    }
+  },
+  "parts3_5": {
+    "loader_describe": "BatchLoader: 720 images on disk (0 metadata rows without a file), batch_size=16, 45 batches/epoch, shuffle=True, classes={'Benign': 240, 'Indeterminate': 240, 'Malignant': 240}, preprocessing={'channels_first': True}",
+    "batch_shape": [
+      16,
+      3,
+      224,
+      224
+    ],
+    "batch_dtype": "float32",
+    "minmax_range": [
+      0.012,
+      1.0
+    ],
+    "zscore_mean_std": [
+      -0.193,
+      1.054
+    ],
+    "steps_example": [
+      "resize 600x450 -> 224x224 (bilinear)",
+      "colour: rgb",
+      "minmax: x / channel max (fixed bounds) -> [0, 1]",
+      "layout: HWC -> CHW"
+    ],
+    "demo_ids": [
+      "ISIC_0167803",
+      "ISIC_0141634",
+      "ISIC_0101062"
+    ]
+  }
+}

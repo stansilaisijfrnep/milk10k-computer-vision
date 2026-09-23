@@ -1,0 +1,4 @@
+diagnosis_1,skin tone 0 (unknown/other) %,skin tone I %,skin tone II %,skin tone III %,skin tone IV %,skin tone V %,head/neck %,site missing %,altered images %
+Benign,0.8,0.8,18.3,52.5,24.2,3.3,20.0,40.8,4.6
+Indeterminate,0.0,15.0,13.3,58.3,11.7,1.7,80.0,5.8,17.5
+Malignant,0.0,0.0,10.8,60.8,21.7,6.7,27.5,34.2,2.1

@@ -1,0 +1,4 @@
+image_type,Benign,Indeterminate,Malignant,n
+clinical: close-up,28.3,2.3,69.4,5240
+dermoscopic,28.3,2.3,69.4,5240
+(all),28.3,2.3,69.4,10480

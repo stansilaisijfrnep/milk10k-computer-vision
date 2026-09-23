@@ -1,0 +1,4 @@
+image_manipulation,Benign,Indeterminate,Malignant,n
+altered,39.7,12.8,47.5,335
+instrument only,27.9,2.0,70.1,10145
+(all),28.3,2.3,69.4,10480
