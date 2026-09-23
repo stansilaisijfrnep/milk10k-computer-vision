@@ -17,3 +17,10 @@ __pycache__/
 
 # Build artifact of scripts/build_deliverable.py (the PDF is the deliverable)
 reports/session1_deliverable.html
+
+# --- Generated notebook/report intermediates ---
+reports/*.html
+.pytest_cache/
+
+# Generated pipeline artifacts ARE committed (they are small and are the
+# deliverable): artifacts/splits/*.csv, artifacts/*.json, reports/figures/*.

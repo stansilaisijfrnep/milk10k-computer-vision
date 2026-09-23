@@ -1,6 +1,25 @@
+# MILK10k course project — pinned to the versions this repo was verified on
+# (Python 3.14). Install with:  pip install -r requirements.txt
+
+# --- Core data stack -------------------------------------------------------
+numpy>=2.0
 pandas>=2.2
-numpy>=1.26
 matplotlib>=3.8
 seaborn>=0.13
+
+# --- Images ----------------------------------------------------------------
 pillow>=10.0
+opencv-python-headless>=4.9      # headless: no GUI needed, smaller wheel
+
+# --- Modelling / splitting / metrics --------------------------------------
+scikit-learn>=1.4                # StratifiedGroupKFold, DummyClassifier, metrics
+torch>=2.2                       # Dataset / DataLoader / WeightedRandomSampler
+torchvision>=0.17                # transforms
+
+# --- Tests -----------------------------------------------------------------
+pytest>=8.0
+
+# --- Notebook --------------------------------------------------------------
 jupyter>=1.0
+nbformat>=5.9
+nbconvert>=7.0

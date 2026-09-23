@@ -109,3 +109,81 @@ def ensure_dirs() -> None:
     """Create the report output folders if they do not exist yet."""
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     TABLES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ===========================================================================
+# Sessions 2-3 homework / Milestone 1 additions
+# ===========================================================================
+# Everything below is the single configuration point for the pipeline: paths,
+# the seed, the input resolution. No module hard-codes any of these.
+
+import os
+
+# --- Data location ---------------------------------------------------------
+# The image folder can be overridden without touching code, which is what makes
+# the notebook portable (see README). Everything else is derived from the repo.
+IMG_DIR = Path(os.environ.get("MILK10K_IMAGES_DIR", IMG_DIR))
+
+# --- Reproducibility -------------------------------------------------------
+SEED = 42                 # every split, sampler and torch generator uses this
+SPLIT_DATE = "2026-09-22"  # date the committed splits were created
+
+# --- Model input -----------------------------------------------------------
+IMAGE_SIZE = 224          # every MILK10k image is 600x450, so this downscales
+VAL_SIZE = 0.15
+TEST_SIZE = 0.15
+
+# ImageNet statistics: Milestone 2 starts from a pretrained backbone, so the
+# inputs must match the distribution those weights were trained on. The
+# train-split statistics are computed and stored too (norm_stats.json) so the
+# choice can be revisited with evidence rather than by default.
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
+
+# --- Generated output ------------------------------------------------------
+# artifacts/  = machine-readable files that LATER milestones load
+# reports/    = files a HUMAN reads
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+SPLITS_DIR = ARTIFACTS_DIR / "splits"
+ARTIFACT_TABLES_DIR = ARTIFACTS_DIR / "tables"
+
+TRAIN_SPLIT_CSV = SPLITS_DIR / "train.csv"
+VAL_SPLIT_CSV = SPLITS_DIR / "val.csv"
+TEST_SPLIT_CSV = SPLITS_DIR / "test.csv"
+
+LABEL_MAP_JSON = ARTIFACTS_DIR / "label_map.json"
+CLASS_WEIGHTS_JSON = ARTIFACTS_DIR / "class_weights.json"
+NORM_STATS_JSON = ARTIFACTS_DIR / "norm_stats.json"
+LESION_TABLE_CSV = ARTIFACT_TABLES_DIR / "lesions.csv"
+IMAGE_SIZE_SUMMARY_CSV = ARTIFACT_TABLES_DIR / "image_size_summary.csv"
+
+MILESTONE1_FIGURES_DIR = FIGURES_DIR / "milestone1"
+QUALITY_REPORT_MD = REPORTS_DIR / "data_quality_report.md"
+QUALITY_REPORT_CSV = ARTIFACT_TABLES_DIR / "data_quality_report.csv"
+
+# --- Label strategy (decided in B3, see docs/label_strategy.md) ------------
+# Primary target: diagnosis_1 kept as THREE classes. "Indeterminate" is a real
+# clinical category (the pathologist could not commit), not noise to be merged.
+PRIMARY_LABEL_COL = "diagnosis_1"
+PRIMARY_LABELS = ["Benign", "Indeterminate", "Malignant"]   # index = integer label
+
+# Stretch target: all 11 codes kept, rare tail handled with weights + sampler
+# rather than by merging, so the confusion matrix stays diagnostically readable.
+STRETCH_LABEL_COL = "dx"
+STRETCH_LABELS = ["AKIEC", "BCC", "BEN_OTH", "BKL", "DF", "INF",
+                  "MAL_OTH", "MEL", "NV", "SCCKA", "VASC"]
+
+# Columns that must never be model inputs: they encode the label or are only
+# knowable after the biopsy that produced the label (B4).
+LEAKY_COLUMNS = [
+    "diagnosis_1", "diagnosis_2", "diagnosis_3", "diagnosis_4",
+    "diagnosis_confirm_type", "diagnosis_full", "invasion_thickness_interval",
+    "melanocytic", "concomitant_biopsy", "lesion_id",
+]
+
+
+def ensure_project_dirs() -> None:
+    """Create every generated-output folder. Safe to call repeatedly."""
+    for d in (FIGURES_DIR, TABLES_DIR, ARTIFACTS_DIR, SPLITS_DIR,
+              ARTIFACT_TABLES_DIR, MILESTONE1_FIGURES_DIR):
+        d.mkdir(parents=True, exist_ok=True)
