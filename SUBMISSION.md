@@ -99,6 +99,20 @@
 
 ---
 
+## Session 2 homework — Extended EDA & data pipeline
+
+| Deliverable | File |
+|---|---|
+| **Report (PDF, 4 pages)** | [`reports/Session2_MILK10k_EDA_Pipeline_Stanislaus_Lattorff.pdf`](reports/Session2_MILK10k_EDA_Pipeline_Stanislaus_Lattorff.pdf) |
+| Report source (renders on GitHub) | [`reports/session2_report.md`](reports/session2_report.md) |
+| Code — Parts 1–2 (metadata association, colour analysis) | [`src/milk10k/eda2.py`](src/milk10k/eda2.py) |
+| Code — Parts 3–4 (`process_image`, `process_batch`, `BatchLoader`) | [`src/milk10k/pipeline.py`](src/milk10k/pipeline.py) |
+| Code — Part 5 (grids, class balance, batch summary) | [`src/milk10k/viz.py`](src/milk10k/viz.py) |
+| Runner / PDF builder | [`scripts/run_session2.py`](scripts/run_session2.py) · [`scripts/build_session2_pdf.py`](scripts/build_session2_pdf.py) |
+| Figures · tables · numbers | `reports/figures/fig16`–`fig25` · `reports/tables/session2_*.csv` · [`reports/session2_summary.md`](reports/session2_summary.md) |
+
+---
+
 ## Tests
 
 ```bash
@@ -111,6 +125,7 @@ PYTHONPATH=src python -m pytest tests/ -v
 | [`tests/test_transforms.py`](tests/test_transforms.py) | `eval_transform` determinism, train randomness, normalisation (B7) |
 | [`tests/test_datasets.py`](tests/test_datasets.py) | batch shapes, ids, class counts, `aggregate_predictions` (A3.6) |
 | [`tests/test_integration.py`](tests/test_integration.py) | end-to-end: tables → splits → weights → loaders |
+| [`tests/test_session2.py`](tests/test_session2.py) | Session 2: preprocessing record, bad-file skipping, loader coverage, V / η² formulas |
 
 ---
 
