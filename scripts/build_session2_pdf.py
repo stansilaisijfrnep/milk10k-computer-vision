@@ -58,10 +58,10 @@ FIG_WIDTH = {
     "fig19_gray_hist_by_class.png": "80%",
     "fig20_rgb_hist_by_class.png": "70%",
     "fig21_color_stats_by_class.png": "92%",
-    "fig22_raw_vs_processed.png": "60%",
+    "fig22_raw_vs_processed.png": "46%",
     "fig23_loader_batch.png": "100%",
-    "fig24_batch_summary.png": "74%",
-    "fig25_class_balance.png": "60%",
+    "fig24_batch_summary.png": "64%",
+    "fig25_class_balance.png": "50%",
 }
 
 
