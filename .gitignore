@@ -20,6 +20,8 @@ reports/session1_deliverable.html
 
 # --- Generated notebook/report intermediates ---
 reports/*.html
+notebooks/*.html
+_run_part_*.py
 .pytest_cache/
 
 # Generated pipeline artifacts ARE committed (they are small and are the
