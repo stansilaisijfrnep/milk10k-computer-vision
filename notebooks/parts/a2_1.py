@@ -1,21 +1,16 @@
 # %% [markdown]
 # ## A2.1 Arrays, views and memory
 #
-# An image is a NumPy array, and the cheap geometric augmentations are array
-# indexing. This section does three things: reproduce Pillow's four transposes
-# with nothing but slicing, find out which of those operations hand back a view
-# into the same memory rather than a new array, and compute what it would cost
-# in RAM to hold the whole dataset decoded.
+# - An image is just a NumPy array, and flips and rotations are just indexing.
+# - Here I (a) redo Pillow's four transposes with slicing, (b) check which ones are views vs copies, (c) work out how much RAM the whole dataset would need.
 
 # %% [markdown]
 # ### (a) Four transforms in NumPy, checked against Pillow
 #
-# Each transform is written as an indexing expression and then compared
-# element-by-element with the Pillow operation it is supposed to reproduce.
-# Two of the four are easy to get wrong, so they are worth stating explicitly:
-# Pillow's `ROTATE_90` turns **counter-clockwise**, and "transpose" of an
-# `H x W x 3` array swaps the first two axes only — `arr.T` would also reverse
-# the channel axis and give a `3 x W x H` array that is not an image any more.
+# - Each one is an indexing expression, compared pixel by pixel with Pillow.
+# - Two are easy to get wrong:
+#   - Pillow's `ROTATE_90` goes **counter-clockwise**
+#   - transpose of an `H x W x 3` image swaps only the first two axes; `arr.T` would also flip the channels
 
 # %%
 from PIL import Image
@@ -82,21 +77,18 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# **Answer (a).** All four transforms reproduce Pillow exactly — `np.array_equal`
-# is `True` for every pair, so the assertions pass. The two that need care:
-# Pillow's `ROTATE_90` rotates counter-clockwise, which is `np.rot90(arr, k=1)`
-# (`k=-1` is the clockwise one and gives a different array); and `TRANSPOSE`
-# means swapping rows and columns only, `arr.transpose(1, 0, 2)`, because `arr.T`
-# reverses all three axes and returns `(3, 600, 450)` — channels first, no longer
-# an image. Transpose is also not a rotation: it mirrors across the main
-# diagonal, which the assertion above confirms.
+# **My answer (a)**
+#
+# - All four match Pillow exactly (`np.array_equal` is `True`, asserts pass).
+# - `ROTATE_90` = `np.rot90(arr, k=1)`; `k=-1` would be clockwise and different.
+# - `TRANSPOSE` = `arr.transpose(1, 0, 2)`; `arr.T` gives `(3, 600, 450)`, which isn't an image any more.
+# - Transpose is not a rotation, it mirrors over the diagonal.
 
 # %% [markdown]
 # ### (b) View or copy?
 #
-# Indexing that only changes strides does not touch the pixels at all — NumPy
-# returns a second object pointing at the same buffer. `np.shares_memory` says
-# which is which.
+# - If indexing only changes the strides, NumPy gives back a new object on the same memory.
+# - `np.shares_memory` tells me which case I'm in.
 
 # %%
 lr = arr[:, ::-1]
@@ -154,19 +146,12 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# **Answer (b).** All four transforms from part (a) return **views**:
-# `np.shares_memory(arr, ...)` is `True` for the two flips, the rotation and the
-# transpose. None of them copies a pixel — they only rewrite the strides, which
-# is why all four come back non-C-contiguous. A **copy** happens only when you
-# force one: `.copy()`, `np.ascontiguousarray` on a non-contiguous view, or a
-# round trip through Pillow. That is a cheap-augmentation win (a flip costs no
-# memory and no pixel traffic) and a bug waiting to happen: the two-line
-# experiment above writes a magenta stripe into rows 40:80 of the flipped view,
-# and it appears at rows 370:410 of the original, which was never assigned to.
-# In a preprocessing pipeline that caches decoded images, an in-place
-# augmentation applied to a view of a cached array silently corrupts the cached
-# original, so every later epoch trains on the damaged image and nothing raises.
-# The fix is to copy before writing in place — or not to write in place at all.
+# **My answer (b)**
+#
+# - All four operations from (a) return **views**: `np.shares_memory` is `True` for both flips, the rotation and the transpose.
+# - A **copy** only happens when I force it: `.copy()`, `np.ascontiguousarray`, or going through Pillow.
+# - My experiment: I wrote a magenta stripe into rows 40:80 of the flipped view, and it showed up in rows 370:410 of the original.
+# - Why I think this matters: if a pipeline caches images and an augmentation writes into a view, it silently damages the cached original for every later epoch. So copy before writing in place.
 
 # %% [markdown]
 # ### (c) Memory budget for the whole dataset
@@ -231,26 +216,15 @@ for shape_name in budget.index:
               f"-> {'fits' if share < 0.5 else 'does NOT fit comfortably'}")
 
 # %% [markdown]
-# **Answer (c).** Decoded, this dataset is large: 8.49 GB as uint8 at the native
-# 600x450 and 33.96 GB as float32, more than most laptops have. Resizing to the 224x224
-# model input cuts that to 1.58 GB (uint8) and 6.31 GB (float32). Can it be
-# pre-loaded? On the 51.5 GB machine this ran on, everything except float32 at
-# full resolution technically fits (table above). On a typical 16 GB laptop only
-# the 224 versions fit: full-resolution uint8 would take over half the RAM before
-# the OS, Python and the model get any, and full-resolution float32 is twice the
-# machine. Either way it is the dtype, not the pixel count, that does the most
-# damage — float32 is a flat 4x on every cell. And even where it fits, a RAM
-# cache written by one notebook is not something a DataLoader should rely on.
+# **My answer (c)**
 #
-# What we do instead is lazy loading: a `Dataset` that decodes one JPEG per
-# `__getitem__` and hands back a tensor, with DataLoader workers decoding the
-# next batch while the GPU works on the current one. That is exactly what this
-# project's `milk10k.datasets.MilkImageDataset` does, and it is affordable
-# because the JPEGs on disk are only 0.35 GB in total — 24x smaller than the
-# decoded array, and the operating system's page cache keeps the hot ones in
-# memory for free. The honest alternatives: pre-resize once to 224 uint8 and
-# memory-map that cache (fastest per epoch, costs 1.58 GB and an extra
-# preprocessing pass, and it freezes the resize so resolution experiments need
-# rebuilding), or decode on the fly (flexible, costs CPU per epoch). Either way
-# the float32 conversion belongs at the end of the per-batch transform — one
-# batch of 32 at 224 is 19.3 MB — never applied to the dataset as a whole.
+# - Full dataset in RAM:
+#   - 600x450: **8.49 GB** as uint8, **33.96 GB** as float32
+#   - 224x224: **1.58 GB** as uint8, **6.31 GB** as float32
+# - On the 51.5 GB machine I ran this on, everything except float32 at full size fits.
+# - On a normal 16 GB laptop, I think only the 224 versions are realistic.
+# - The dtype hurts most: float32 is 4x uint8.
+# - **What I'd do instead:** lazy loading, i.e. a `Dataset` that reads one JPEG at a time, with DataLoader workers preparing the next batch. That's what my `MilkImageDataset` does, and the JPEGs are only 0.35 GB on disk.
+# - Alternatives: pre-resize once to a 224 uint8 cache (fast, but fixes the resolution), or decode on the fly (flexible, costs CPU).
+# - Either way, convert to float32 per batch (one batch of 32 at 224 is 19.3 MB), never for the whole dataset.
+

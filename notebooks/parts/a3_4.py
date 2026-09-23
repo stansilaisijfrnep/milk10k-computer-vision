@@ -1,15 +1,9 @@
 # %% [markdown]
 # ## A3.4 Metrics and the cost of errors
 #
-# A metric is not a neutral measuring device. It is a statement about which mistakes
-# matter, and on a 69% malignant dataset the default metric — accuracy — makes a
-# statement nobody would defend out loud. This section proves that on the project's own
-# test split: first by scoring predictors that contain no information at all, then by
-# writing down an explicit cost matrix and re-ranking the same predictors under it.
-#
-# Everything runs on the **lesion-level test split** with the 3-class `diagnosis_1`
-# target. The split comes from `splits.split_lesions`, so it is the same partition the
-# rest of the project uses, and the two images of a lesion can never straddle it.
+# - On a 69% malignant dataset, I think plain accuracy says something nobody would defend.
+# - I show it in two steps: (a) score predictors that know nothing, (b) put an explicit price on each error and re-rank them.
+# - Everything uses the **lesion-level test split** with the 3-class `diagnosis_1`, from `splits.split_lesions`.
 
 # %%
 from sklearn.dummy import DummyClassifier
@@ -46,9 +40,8 @@ print(pd.DataFrame({"n": test_counts, "share": test_counts / len(y_test)}).round
 # %% [markdown]
 # ### (a) Three predictors that know nothing
 #
-# `DummyClassifier` is fitted on the training labels and evaluated on the test labels.
-# `random_state` is fixed at `config.SEED` so the two random strategies give the same
-# table on every rerun.
+# - `DummyClassifier` fitted on train, evaluated on test.
+# - `random_state = config.SEED`, so the random ones give the same result every time.
 
 # %%
 DUMMIES = {
@@ -99,40 +92,23 @@ ax.set_title("stratified-random dummy, test lesions")
 plt.show()
 
 # %% [markdown]
-# **This is the whole reason the exercise exists.** Always-Malignant scores an accuracy
-# of 0.694 — a number that looks like a working classifier and would pass unexamined in
-# a slide deck. It is a single hard-coded string. Its balanced accuracy is exactly
-# 1/3 = 0.333, the value a three-class predictor gets for free, and its macro-F1 is
-# 0.273 because two of its three per-class F1 scores are 0. The accuracy is high only
-# because 69.4% of the test lesions are malignant; the metric is reporting the class
-# prior, not the model.
-#
-# The stratified-random confusion matrix shows the same thing from the other side: it
-# spreads its guesses over all three classes in the training proportions, gets 0.557
-# accuracy, and still has 164 malignant lesions sitting in the "predicted Benign" cell.
-# That is why this project reports **balanced accuracy and macro-F1**, never accuracy
-# alone — both of those metrics refuse to reward a predictor for knowing the prior.
+# - **Always-Malignant gets 0.694 accuracy.** That looks like a working model, but it's one hard-coded answer.
+# - Its balanced accuracy is 1/3 = 0.333 (free for 3 classes) and macro-F1 is 0.273.
+# - The accuracy only reflects that 69.4% of test lesions are malignant.
+# - The stratified-random confusion matrix: 0.557 accuracy, with **164** malignant lesions predicted as Benign.
+# - That's why I report **balanced accuracy and macro-F1**, not accuracy alone.
 
 # %% [markdown]
 # ### (b) An explicit cost matrix
 #
-# Balanced accuracy and macro-F1 fix the prior problem but still treat all three
-# classes as equally valuable, which no dermatologist does. So the errors get an
-# explicit price, in the brief's units. Rows are the truth, columns are the prediction:
+# Rows = truth, columns = prediction:
 #
-# * **row Malignant, any other column = 50.** A malignancy that the system did not call
-#   malignant. The lesion is not excised; the cost is a delayed cancer diagnosis.
-# * **row Benign, any other column = 1.** A benign lesion routed to work-up: one
-#   unnecessary biopsy, some patient anxiety, a modest bill.
-# * **row Indeterminate, any other column = 5.** An indeterminate lesion mis-triaged in
-#   either direction — worse than a false alarm, better than a missed cancer.
-# * **diagonal = 0.** Correct predictions are free.
+# - **true Malignant, predicted anything else = 50**: missed cancer, it doesn't get removed
+# - **true Benign, predicted anything else = 1**: one unnecessary biopsy
+# - **true Indeterminate, predicted anything else = 5**: worse than a false alarm, better than a missed cancer
+# - **correct = 0**
 #
-# One simplification has to be stated rather than hidden: the cost is charged by the
-# **true** class, so truth-Malignant / predicted-Indeterminate also costs 50, even
-# though in a real clinic an "indeterminate" call still triggers follow-up and would be
-# cheaper than a confident "benign". This matrix is therefore slightly pessimistic about
-# that one cell; the brief's scheme is kept as given so the numbers stay checkable.
+# One simplification I keep from the brief: cost depends on the *true* class, so Malignant predicted as Indeterminate also costs 50, even though in real life "indeterminate" would still lead to follow-up.
 
 # %%
 MISS_MALIGNANT = 50.0        # truth Malignant called anything else
@@ -160,11 +136,9 @@ print(f"\nasymmetry: a missed malignancy costs "
       f"{MISS_MALIGNANT / FALSE_ALARM:.0f}x an unnecessary biopsy")
 
 # %% [markdown]
-# **The asymmetry is a clinical judgement, not a mathematical one.** Nothing in the data
-# implies 50:1. That ratio says a clinician would accept fifty unnecessary biopsies to
-# catch one extra melanoma, and it is the single number a domain expert should be asked
-# to set — because every threshold, every class weight and every "best" model downstream
-# is a consequence of it.
+# - **The 50:1 ratio is a clinical decision, not something the data tells me.**
+# - It means "50 unnecessary biopsies are worth catching one more melanoma".
+# - I think a dermatologist should set this number, since thresholds, class weights and model choice all follow from it.
 
 # %%
 # The fourth predictor the brief asks for, plus the third constant, so that "which
@@ -236,41 +210,15 @@ print(f"\n{int(missed.sum())} missed malignancies buy "
       f"{rows.loc['misses 25% of malignancies', 'cost_per_lesion'] / rows.loc['always-Malignant', 'cost_per_lesion']:.0f}x more.")
 
 # %% [markdown]
-# **Answer.** Under this cost matrix the optimal constant is **always-Malignant, at 0.39
-# per lesion**. It never misses a malignancy, so it pays only the cheap false-alarm
-# price: 224 benign lesions x 1 plus 17 indeterminate x 5 = 309 over 787 lesions.
-# Always-Benign is catastrophic at **34.80 per lesion**, 89x worse, because it hands
-# back all 546 malignancies at 50 each — and it is exactly the kind of predictor that
-# looks reasonable on paper, with a confusion matrix full of correct benign calls.
-# Always-Indeterminate is worse still at 34.97.
+# **My answer**
 #
-# Do the rankings agree? **On accuracy, on these five predictors, yes — and that
-# agreement is a coincidence of this dataset, not a reassurance.** With 69.4% malignant
-# prevalence, the constant that maximises accuracy is also the one that avoids the
-# expensive error, so the two orderings coincide. The moment a predictor trades
-# malignant recall for overall correctness the agreement breaks: the constructed
-# predictor above beats always-Malignant on accuracy, 0.813 against 0.694, and costs
-# 24x more per lesion - 147 malignancies sent home.
-#
-# The disagreement that is *already present* in the table is with the class-balanced
-# metrics this project actually uses. Balanced accuracy ranks uniform-random (0.369) and
-# stratified-random (0.363) **above** always-Malignant (0.333), and macro-F1 ranks
-# stratified-random above it and uniform-random level with it (0.273 each) — yet
-# always-Malignant is 29x and 60x cheaper than those two. Worse, always-Benign and always-Malignant have the *identical*
-# balanced accuracy of 0.333 while differing by a factor of 89 in cost. So balanced
-# accuracy fixes the prior problem of part (a) and is still blind to the asymmetry of
-# part (b). No single scalar covers both.
-#
-# The conclusion the project needs: **the metric you optimise encodes a clinical value
-# judgement, so it has to be chosen deliberately and stated, not inherited from a
-# library default.** Consistent with the framing in A1.4, this project optimises malignant
-# sensitivity at a fixed specificity, reports balanced accuracy and macro-F1 beside it
-# together with the full confusion matrix, and uses the cost matrix as the tie-breaker
-# when two models are close.
-#
-# The honest caveat: "always-Malignant is cost-optimal" is an artefact of a 69.4%
-# malignant dataset combined with this 50:1 ratio. MILK10k is a curated biopsy-referral
-# archive, not a population. In a primary-care clinic where a large majority of lesions
-# are benign, the same matrix would make blanket excision ruinously expensive and would
-# favour a completely different operating point. That is precisely why the deployment
-# population has to be stated before any metric is quoted.
+# - **Best constant under my costs: always-Malignant, 0.39 per lesion.** It never misses a cancer, so it only pays for false alarms: 224 benign x 1 + 17 indeterminate x 5 = 309 over 787 lesions.
+# - **Always-Benign: 34.80 per lesion (89x worse)**, because it misses all 546 malignant lesions. Always-Indeterminate is 34.97.
+# - **Accuracy vs cost:** on these predictors they happen to agree, but from what I understood that's only because 69.4% are malignant. My constructed example beats always-Malignant on accuracy (0.813 vs 0.694) but costs 24x more, since it sends 147 cancers home.
+# - **The real disagreement is with balanced accuracy / macro-F1:**
+#   - uniform-random (0.369) and stratified-random (0.363) rank *above* always-Malignant (0.333) on balanced accuracy, and macro-F1 ties uniform-random with it (0.273 each)
+#   - yet always-Malignant is 29x and 60x cheaper than those two
+#   - always-Benign and always-Malignant have the *same* balanced accuracy (0.333) but differ 89x in cost
+# - **My conclusion:** the metric I optimise is a clinical value judgement, so I choose it on purpose. Like in A1.4: malignant sensitivity at a fixed specificity, plus balanced accuracy, macro-F1 and the confusion matrix, with the cost matrix as a tie-breaker.
+# - **Caveat:** "always-Malignant is cheapest" only holds because the dataset is 69.4% malignant. In a normal clinic where most lesions are benign, removing everything would be far too expensive.
+

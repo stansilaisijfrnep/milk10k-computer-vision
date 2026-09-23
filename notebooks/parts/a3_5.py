@@ -1,16 +1,10 @@
 # %% [markdown]
-# ## A3.5 Is this augmentation label-safe? A quantitative audit
+# ## A3.5 Is this augmentation label-safe?
 #
-# An augmentation is a claim: *this transformation never changes the diagnosis*. For a
-# geometric operation that claim is easy to defend. For a colour operation it is not —
-# pigmentation and erythema are themselves diagnostic criteria, so a large enough hue or
-# brightness shift changes the lesion while leaving the label on disk untouched.
-#
-# This section turns that worry into a number. We measure how far Benign and Malignant
-# lesions actually sit apart in mean hue and mean brightness, then measure how far each
-# `ColorJitter` setting moves the *same* statistic on the *same* images. Anything that moves
-# colour further than the classes are apart is a candidate for relabelling an image by
-# accident.
+# - Every augmentation claims "this never changes the diagnosis".
+# - For flips and rotations that's easy to believe. For colour it isn't, because pigment and redness *are* part of the diagnosis.
+# - So I measure (1) how far apart Benign and Malignant lesions really are in hue and brightness, and (2) how far each `ColorJitter` setting moves the same images.
+# - If a jitter moves colour more than the class gap, it could effectively relabel an image.
 
 # %%
 from matplotlib.colors import rgb_to_hsv
@@ -47,23 +41,14 @@ print(f"audited: {len(sample)} images, {N_PER_GROUP} per group, seed={config.SEE
       f"working size {WORK_SIZE}x{WORK_SIZE}")
 
 # %% [markdown]
-# ### The lesion-pixel proxy — and why it is only a proxy
+# ### My "lesion pixels" are only a proxy
 #
-# The brief asks for lesion pixels, but MILK10k ships no segmentation masks. Rather than
-# invent one, we use a rule transparent enough to be argued with:
-#
-# 1. keep the **central 50% of each side** (25% of the frame) — in dermoscopy the operator
-#    centres the lesion under the contact plate;
-# 2. inside that crop, keep the pixels **darker than that crop's own median V** — pigment is
-#    darker than the surrounding skin.
-#
-# This is a proxy, not a segmentation, and it fails in a predictable way: for amelanotic
-# lesions — pink, pearly BCC being the commonest malignant class here — the lesion is *not*
-# darker than perilesional skin, so the darker-half rule picks up some surrounding skin
-# instead. The figure shows the proxy on one lesion from each class so the reader can judge
-# that failure rather than take our word for it. Because the proxy is arguable, every
-# statistic below is also computed on the **whole frame** as a control, and the two answers
-# are reported side by side.
+# - MILK10k has no segmentation masks, so I use a simple rule:
+#   1. keep the **central 50% of each side**, since the lesion is usually centred in dermoscopy
+#   2. inside that, keep pixels **darker than the crop's median V**, since pigment is darker than skin
+# - Where it fails: pink lesions that aren't darker (e.g. many BCCs), where it picks up surrounding skin.
+# - The figure shows it on one lesion per class so you can judge it.
+# - Because it's debatable, I also compute everything on the **whole image** and show both.
 
 # %%
 def lesion_proxy_mask(v: np.ndarray, crop_frac: float = CROP_FRAC) -> np.ndarray:
@@ -146,18 +131,10 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# ### Measuring the class gap and the jitter-induced shift
+# ### Measuring the class gap and the jitter shift
 #
-# Each image is measured once in its original state and once per jitter setting. Two details
-# make the numbers comparable rather than merely adjacent:
-#
-# * the mask is computed **on the original image and then reused** for every jittered
-#   version. Re-deriving it after a brightness change would silently select a different set
-#   of pixels and mix a mask effect into the colour measurement;
-# * each jitter is applied at its **maximum** shift, not at a random draw, by passing a
-#   degenerate range to `ColorJitter` (`hue=(h, h)`, `brightness=(1-b, 1-b)`). For brightness
-#   we take the darkening end, because the brightening end clips at 255 and would understate
-#   the shift the transform can actually produce.
+# - The mask is computed on the original and **reused** for every jittered version; otherwise a brightness change would select different pixels.
+# - Each jitter is applied at its **maximum** (`hue=(h, h)`, `brightness=(1-b, 1-b)`). For brightness I take the darkening side, because brightening clips at 255 and would understate the shift.
 
 # %%
 records = []
@@ -223,11 +200,8 @@ print(f"class gap, whole frame        : hue {GAP_HUE_F:6.2f} deg   V {GAP_V_F:.4
 print(f"mean proxy mask size          : {100 * per_image['mask_frac'].mean():.1f}% of the frame")
 
 # %% [markdown]
-# The two pixel definitions disagree sharply, which is the first real finding and the reason
-# both are carried through the table below. Before reading it, one check that the instrument
-# works: a `hue=h` jitter shifts every pixel by exactly `h * 360` degrees, and a
-# `brightness=b` jitter at its darkening end multiplies V by `1-b`, so the measured shifts
-# have to land on those numbers. Both are asserted rather than eyeballed.
+# - The two pixel definitions disagree a lot, which is my first finding and why I keep both in the table.
+# - Sanity check: hue `h` should shift by exactly `h * 360` degrees and brightness `b` should multiply V by `1-b`. Both are asserted.
 
 # %%
 rows = []
@@ -325,65 +299,28 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# **Answer (a) — which parameters change colour more than the class gap?** Measured on 100
-# Benign and 100 Malignant dermoscopic training images, over the proxy lesion pixels, the
-# classes sit **0.54 degrees apart in circular-mean hue** and **0.142 apart in mean V**. On
-# that yardstick **all four hue settings exceed the gap** — 0.02 shifts hue by 6.30 degrees
-# (11.57x the gap), 0.05 by 16.05 (29.50x), 0.1 by 34.25 (62.95x), 0.5 by 178.06 (327.30x) —
-# while for brightness
-# **0.3 (0.177 V, 1.24x) and 0.6 (0.351 V, 2.47x) exceed it** and 0.1 (0.060 V, 0.42x) and
-# 0.2 (0.118 V, 0.83x) stay under.
+# **My answer (a): which settings change colour more than the class gap?**
 #
-# That is not the expected result for hue, and the reason is worth stating plainly: the hue
-# gap is essentially zero. Benign lesions average 359.9 degrees and Malignant 0.4 degrees —
-# both classes are red — so "bigger than the hue gap" is a test that any non-zero hue jitter
-# passes and that therefore certifies nothing. Mean lesion hue does not separate these
-# classes at all. That negative result is still useful twice over: it says a model cannot be
-# taking a shortcut on average lesion hue, and it warns that a near-zero denominator makes
-# the ratio column meaningless on its own.
+# On the lesion proxy (100 Benign + 100 Malignant dermoscopic training images), the gap is **0.54° in hue** and **0.142 in V**.
 #
-# **The proxy changes the answer, so both definitions are reported.** On the whole frame the
-# gaps are 10.22 degrees and 0.0398 V — the hue gap is 19x larger and the V gap 3.6x smaller
-# than on the proxy pixels. Under that definition the verdicts flip: hue=0.02 falls *below*
-# the gap (0.62x) while brightness=0.1 and 0.2 rise *above* it (1.51x and 2.97x). **No tested
-# setting is below the class gap under both definitions.** Without a real segmentation mask
-# this audit can bound the risk but cannot settle it, and that limitation is a finding rather
-# than a failure — it is exactly why the decision belongs to a clinician.
+# - **Hue:** all four settings exceed it: 0.02 → 6.30° (11.57x), 0.05 → 16.05° (29.50x), 0.1 → 34.25° (62.95x), 0.5 → 178.06° (327.30x).
+# - **Brightness:** 0.3 (0.177, 1.24x) and 0.6 (0.351, 2.47x) exceed it; 0.1 (0.060, 0.42x) and 0.2 (0.118, 0.83x) stay under.
 #
-# **A sturdier yardstick, and the consequence for `train_transform` (hue=0.02,
-# brightness=0.2).** A difference of means over 100 images is fragile; the within-class
-# spread is not. Per-image hue varies with a circular sd of 28.9 degrees (Benign) and 19.3
-# (Malignant), and per-image mean V with an sd of 0.158 and 0.119. Against that, hue=0.02's
-# 6.30 degrees is between a fifth and a third of the natural within-class variation and is
-# defensible — it is also the size of drift a different dermatoscope's white balance would
-# produce — whereas hue=0.1
-# (34.25 degrees) exceeds the spread of both classes and hue=0.5 (178.06 degrees) rotates a
-# red lesion to cyan, as the strip above shows. So the measurements **support hue=0.02** and
-# rule out the torchvision-tutorial default of 0.5 outright. They do **not** comfortably
-# support brightness=0.2: its 0.1182 shift is 83% of the entire proxy class gap, 2.97x the
-# whole-frame gap, and 0.75 to 0.99 of a within-class standard deviation (0.158 Benign, 0.119
-# Malignant), which means a single augmented image can be shifted about as far as a typical
-# Benign/Malignant brightness difference. **Tighten brightness
-# from 0.2 to 0.1**; even 0.1 stays above the whole-frame gap, so the residual risk is a
-# question for a clinician rather than for another parameter sweep. *This recommendation
-# was acted on:* `transforms.JITTER_BRIGHTNESS` is now 0.1, so the pipeline follows its own
-# audit. The 0.2 row above is kept because it is the setting the audit rejected.
+# What I make of it:
+#
+# - The hue gap is basically zero (Benign 359.9°, Malignant 0.4°, both red), so "bigger than the hue gap" says nothing. Average lesion hue simply doesn't separate the classes, which also means a model can't cheat with it.
+# - On the whole image the gaps are 10.22° and 0.0398 V, and the verdicts flip: hue 0.02 is *below* the gap (0.62x), brightness 0.1 and 0.2 are *above* (1.51x, 2.97x). **No setting is below the gap under both definitions.** Without real masks I can't fully settle it.
+# - A steadier comparison is the spread *within* each class: hue sd 28.9° (Benign) / 19.3° (Malignant), V sd 0.158 / 0.119.
+#   - **hue 0.02** (6.30°) is a fifth to a third of that, so I think it's fine; hue 0.1 exceeds it and hue 0.5 turns red lesions cyan.
+#   - **brightness 0.2** shifts 0.1182, i.e. 83% of the proxy gap and 0.75–0.99 of a within-class sd, which is too much in my opinion.
+# - **Decision:** keep hue 0.02, lower brightness from 0.2 to 0.1. I did that: `transforms.JITTER_BRIGHTNESS` is now 0.1. I kept the 0.2 row to show what was rejected.
 
 # %% [markdown]
-# **Answer (b).** The geometric augmentations are safe here — horizontal and vertical flips,
-# rotation, and mild scale or crop — because a dermatoscope is applied at whatever angle is
-# convenient and skin has no canonical "up", so every transformed image is one that could
-# genuinely have been captured; that is a domain-specific ruling and not a universal one,
-# since a vertical flip of a chest X-ray produces an anatomically impossible image. Anything
-# touching colour is risky, and so is aggressive cropping: pigmentation, erythema and the
-# blue-white veil are diagnostic criteria in their own right, a hue shift large enough to
-# move a lesion across the class colour gap has changed the label while leaving the filename
-# alone, and a hard crop can cut off the lesion border, which is half of the ABCD rule. The
-# audit above is why the colour knobs sit where they do rather than at library defaults, and
-# it says the brightness setting is the one running closest to its limit and should come
-# down. Approval is not an engineering call: every augmentation asserts that a transformation
-# never changes the diagnosis, which is a medical claim, so a dermatologist or
-# dermatopathologist has to sign it off. The engineer's job is the one done here — quantify
-# the shift in the same units as the real class difference, and be explicit about what the
-# measurement cannot settle — so that the clinician rules on a number instead of a vibe, and
-# so the choice is still auditable after everyone who made it has left the project.
+# **My answer (b)**
+#
+# - **Safe, I think:** flips, rotation and mild crops, because a dermatoscope can be held at any angle and skin has no "up" (unlike a chest X-ray, where a vertical flip would be anatomically impossible).
+# - **Risky:** anything touching colour, since pigment, redness and the blue-white veil are diagnostic, so a big enough shift changes the lesion but not the label.
+# - **Also risky:** aggressive crops, because they can cut off the lesion border, which is half of the ABCD rule.
+# - **From my audit:** brightness was the setting closest to the limit, which is why I lowered it to 0.1.
+# - **Who approves:** a dermatologist or dermatopathologist, because "this never changes the diagnosis" is a medical claim. My job is to measure the shift in the same units as the class difference, so they can decide based on numbers.
+

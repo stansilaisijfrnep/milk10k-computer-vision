@@ -1,19 +1,14 @@
 # %% [markdown]
 # ## A2.2 JPEG compression and the file-size shortcut
 #
-# MILK10k ships as JPEG, so every pixel the model ever sees has already been
-# through a lossy codec. This section does three things: measure what further
-# compression costs (part a), reason about what an already-compressed dataset
-# implies for the pipeline (part b), and test whether file size leaks the label
-# (part c).
+# - All MILK10k images are already JPEG, so the model only ever sees compressed pixels.
+# - (a) what extra compression costs, (b) what that means for the model, (c) whether file size leaks the label.
 
 # %% [markdown]
 # ### (a) Re-encoding one image at five quality levels
 #
-# One real dermoscopic melanoma, re-encoded in memory at quality 95, 75, 50, 25
-# and 10. Melanoma is the right subject here: pigment network, dots and globules
-# are exactly the high-frequency structure a quantised DCT throws away first.
-# PSNR is implemented below rather than imported.
+# - I use a real dermoscopic melanoma: its pigment network and dots are exactly the fine detail JPEG throws away first.
+# - PSNR is my own implementation below, not imported.
 
 # %%
 import io
@@ -93,13 +88,8 @@ compression = pd.DataFrame(rows)
 print(compression.to_string(index=False, float_format=lambda v: f"{v:.2f}"))
 
 # %% [markdown]
-# The original is **already a JPEG**, so every row above is a *re-encoding*.
-# The q=95 PSNR is measured against an already-lossy reference, not against
-# ground truth — the information the first encoder discarded is gone and no
-# quality setting brings it back.
-#
-# That also explains the one result that looks wrong: **q=75 scores higher than
-# q=95**. The next cell checks why.
+# - The original is **already a JPEG**, so every row is a *re-encoding* measured against an already-lossy reference.
+# - One result looks wrong: **q=75 scores higher than q=95**. The next cell checks why.
 
 # %%
 # Why q=75 is near-lossless: read the quantisation table the shipped file
@@ -196,58 +186,28 @@ fig.suptitle("Best vs worst re-encoding, 4x nearest-neighbour zoom", y=1.04)
 plt.show()
 
 # %% [markdown]
-# **Answer (a).** Re-encoding is not free and it is not monotone in the quality
-# slider. Quality 75 is *near-lossless* (PSNR ~71 dB) because the shipped files
-# already carry the standard quality-75 quantisation table — verified above, and
-# identical in all 10,480 files — so re-encoding at 75 re-quantises
-# coefficients that already sit on that grid. Quality 95 scores **worse**
-# (~54 dB) while producing a file ~1.7x larger than the original: a finer grid
-# cannot recover information the first encoder already destroyed, and the
-# decode -> DCT -> 4:2:0 chroma round trip adds error of its own. Below 50 the
-# loss becomes real: q=10 drops to ~32 dB and the zoom shows flat 8x8 blocks
-# where the pigment border was. The practical rule is that a higher quality
-# setting on a re-encode buys bytes, not fidelity.
+# **My answer (a)**
+#
+# - Re-encoding isn't free, and higher quality isn't always better.
+# - q=75 is almost lossless (~71 dB): all 10,480 files already use the standard quality-75 table, so re-encoding at 75 lands on the same grid.
+# - q=95 is **worse** (~54 dB) and the file gets ~1.7x bigger, since a finer grid can't bring back what was already lost.
+# - Below 50 it gets bad: q=10 is ~32 dB and the zoom shows 8x8 blocks where the lesion border was.
+# - What I take from it: on a re-encode, higher quality buys bytes, not detail.
 
 # %% [markdown]
-# ### (b) What "already JPEG" implies for the model
+# ### (b) What "already JPEG" means for the model
 #
-# **The artefacts are part of the data.** Every image was quantised on an 8x8
-# DCT grid with 4:2:0 chroma subsampling — the same table for all 10,480 files.
-# Blocking edges and desaturated chroma transitions are therefore present in
-# every training, validation and test image, and a convolutional network will
-# happily learn filters that respond to them. They are not noise the model
-# averages out; they are a consistent texture it can key on.
-#
-# **Never round-trip through JPEG again.** Any augmentation that writes a JPEG
-# and reads it back applies a second lossy pass on top of the first — double
-# compression, and it compounds across epochs if the cache is reused. Part (a)
-# quantifies the cost: even the best-case re-encode loses measurable fidelity,
-# and the q=95 row shows the loss can grow while the file does. The pipeline
-# therefore decodes once and keeps arrays and tensors in memory from that point
-# on; `preprocessing.preprocess_image` and the torchvision transforms in
-# `transforms.py` both work on decoded pixels and never re-serialise.
-#
-# **Resizing resamples the artefacts, not the signal.** Downscaling happens
-# after compression, so the 224x224 input is an average of already-quantised
-# pixels. That cuts both ways: the interpolation partially smooths the 8x8
-# blocking away, which is a mild argument for downscaling 600x450 -> 224 rather
-# than cropping at native resolution and feeding the blocks in untouched. It is
-# an argument about artefacts only — the reason `preprocess_image` resizes
-# instead of centre-cropping is that the lesion border is diagnostic.
-#
-# **The risk this creates.** If compression strength correlated with class —
-# different clinic, different camera, different export setting per diagnosis —
-# the model could score well by reading the codec instead of the pathology.
-# That is a testable claim, and part (c) tests it.
+# - **The artefacts are part of the data.** Every image has 8x8 blocks and reduced colour resolution, so I think a CNN could learn to react to them.
+# - **Never save as JPEG again.** An augmentation that writes and re-reads a JPEG compresses twice. My pipeline decodes once and then only works with arrays/tensors.
+# - **Resizing happens after compression**, so it resamples the artefacts. Downscaling 600x450 → 224 smooths the blocks a bit (but I resize mainly to keep the lesion border in frame).
+# - **The risk:** if compression differed by class (another clinic or camera per diagnosis), the model could read the codec instead of the lesion. Part (c) tests that.
 
 # %% [markdown]
 # ### (c) Does file size leak the label?
 #
-# File size is a free proxy for how hard an image was to compress. If malignant
-# lesions were systematically harder, a model could reach a respectable score
-# without looking at the lesion at all. `os.stat` over all 10,480 files costs no
-# decoding, so the test is cheap — `preprocessing.image_file_sizes()` does it in
-# one directory scan.
+# - File size shows how hard an image was to compress.
+# - If malignant images were systematically bigger or smaller, a model could cheat.
+# - `os.stat` on all 10,480 files is cheap: `preprocessing.image_file_sizes()`.
 
 # %%
 from sklearn.metrics import roc_auc_score
@@ -343,39 +303,17 @@ fig.suptitle("File size separates the cameras, not the diagnoses", y=1.02)
 plt.show()
 
 # %% [markdown]
-# **Answer (c). There is no file-size shortcut for malignancy.** As a malignancy
-# score, file size gives AUC **0.464** on dermoscopic images, **0.511** on
-# clinical close-ups and **0.499** on all 10,480 images — chance is 0.500, and
-# dropping the Indeterminate lesions barely moves it (0.481 and 0.505). The
-# dermoscopic value is honestly *not* pure noise: its bootstrap interval printed
-# above excludes 0.5, so smaller files are very slightly more often malignant.
-# But read the other way round it is an AUC of about 0.54 — a signal so weak that
-# no model could score anything useful from it — and the clinical value sits at
-# chance. The boxplot agrees: the Benign and Malignant distributions sit on top
-# of each other. That is what "no shortcut" means here: not zero, but negligible.
+# **My answer (c): no, file size is not a shortcut for malignancy.**
 #
-# This is a negative result and it is worth stating plainly, because it is what
-# lets the project stop worrying about this particular leak. Had the AUC come
-# back at, say, 0.70, the honest response would have been to treat compression
-# as a confound — re-encode every image to one fixed quality before training,
-# and re-check the headline metric against that baseline. It did not, so no such
-# correction is needed. It also matches what part (a) found: every file carries
-# the *same* quantisation table, so ISIC re-encoded the whole archive with one
-# setting and there is no per-class compression difference left to exploit.
+# - AUC of file size as a malignancy score: **0.464** dermoscopic, **0.511** clinical, **0.499** all images (chance = 0.5). Without Indeterminate: 0.481 and 0.505.
+# - To be honest, the dermoscopic value isn't pure noise (its bootstrap interval excludes 0.5), but it's so weak that I don't think a model could use it.
+# - The boxplots for Benign and Malignant overlap almost completely.
+# - If it had been ~0.70, I would have re-encoded every image to one fixed quality. That's not needed here.
+# - It fits (a): every file has the same quantisation table, so there's no per-class compression difference.
 #
-# **What file size does separate is modality.** Median 26.0 KB (KiB, 1 KB = 1,024
-# bytes) dermoscopic against 38.8 KB clinical, and an AUC of **0.865** for predicting `image_type`.
-# The reason is acquisition, not pathology: a clinical close-up is a hand-held
-# photograph containing surrounding skin texture, hair, background and uneven
-# lighting — all high-frequency content that survives the DCT and costs bits. A
-# dermoscopic image is a contact-immersion field: smooth, evenly lit, filling the
-# frame with one lesion, so far more of its energy sits in coefficients the
-# quantiser zeroes out.
+# **What file size does separate is the image type**
 #
-# **That modality signal does not become a label shortcut**, because `image_type`
-# is perfectly balanced across `diagnosis_1` — both modalities are 28.3% Benign,
-# 2.3% Indeterminate, 69.4% Malignant (crosstab printed above), since every
-# lesion contributes exactly one of each. A feature that predicts modality therefore carries no information
-# about the diagnosis. The conclusion for the pipeline is that compression is a
-# modality marker to be aware of when mixing the two views in one model, not a
-# leak to defend against.
+# - Median 26.0 KB dermoscopic vs 38.8 KB clinical; AUC **0.865** for predicting `image_type`.
+# - From what I understood, that comes from how the photos are taken: clinical close-ups have skin texture, hair, background and uneven light (harder to compress), while dermoscopic images are smooth and evenly lit.
+# - It still doesn't become a label shortcut: both image types are exactly 28.3% Benign / 2.3% Indeterminate / 69.4% Malignant, because every lesion has one of each.
+

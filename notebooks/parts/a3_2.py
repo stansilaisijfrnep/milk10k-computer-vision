@@ -1,11 +1,8 @@
 # %% [markdown]
 # ## A3.2 A reusable three-way split + property test
 #
-# The split lives in `milk10k.splits.split_lesions`, not in this notebook: the same
-# function has to produce the committed `train/val/test.csv` files that Part B trains
-# on, so it cannot be notebook-local code. Here it is used with the project seed, and
-# then tested as a *property* — run it with ten different seeds and check that the
-# three things we actually rely on hold every time, rather than checking one lucky run.
+# - The split lives in `milk10k.splits.split_lesions`, because the same function writes the `train/val/test.csv` files Part B uses.
+# - I run it with the project seed, then test it with **ten** seeds, not just one lucky run.
 
 # %%
 import warnings
@@ -55,41 +52,28 @@ print(f"\nmax class-proportion deviation from the full table: "
       f"{report['max_abs_deviation_pp']:.2f} pp ({worst['class']} in {worst['split']})")
 
 # %% [markdown]
-# **How `(val_size, test_size)` becomes folds.** `StratifiedGroupKFold` takes a number
-# of folds `k`, not a percentage, so the requested proportions have to be turned into
-# fold arithmetic. `splits.fold_plan(fraction)` does that: it searches every `k` from 2
-# to 20, takes `m = round(fraction * k)`, and returns the `(k, m)` whose ratio `m/k` is
-# closest to the request. Taking *several* folds instead of one is the point — `m/k`
-# approximates a proportion far more finely than `1/k` can.
+# **How I turn `(val_size, test_size)` into folds**
 #
-# The split then runs in two stages:
+# - `StratifiedGroupKFold` wants a number of folds, not a percentage.
+# - `splits.fold_plan(fraction)` tries every `k` from 2 to 20 and picks the `m` of `k` folds closest to the fraction I want.
+# - Two stages:
+#   - **A:** hold out val + test together = 0.30 → 3 of 10 folds; the other 7 are train
+#   - **B:** cut that block in half → 1 of 2 folds is test, the other is val
+# - The simple version (1 fold of 7 for test) would give 14.29% blocks and 71.4% train, 1.4 pp off. Mine is within 0.02 pp for seed 42 and 0.04 pp for all ten seeds.
 #
-# * **Stage A** holds out validation and test *together*: 0.30, which `fold_plan` turns
-#   into 3 of 10 folds — exactly 30%. The other 7 folds are the training set.
-# * **Stage B** cuts that 30% block in half, targeting `test_size / (val_size +
-#   test_size)` = 0.5, i.e. 1 of 2 folds. The first fold becomes test, the second val.
+# Two details:
 #
-# The obvious one-stage alternative — carve off one fold of seven for test, re-split the
-# rest — gives 14.29% per block and a 71.4% training set, 1.4 percentage points off the
-# request. The printed deviations show the two-stage version lands within 0.02 pp for
-# seed 42 and within 0.04 pp for every one of the ten seeds below.
-#
-# Two details a grader will ask about. `shuffle=True` is mandatory: without it
-# `StratifiedGroupKFold` is deterministic and ignores `random_state`, so every "seed"
-# would give the identical split and the study below would be theatre. And the *grouping*
-# is degenerate here — `lesion_id` is unique in this table, so each group has one member
-# and the splitter behaves like `StratifiedKFold`. The no-leak guarantee is delivered one
-# step later, in `splits.assign_images`, where each lesion's two photographs inherit its
-# split and therefore cannot be separated. Passing `groups=` anyway keeps the function
-# correct rather than accidentally correct if a lesion ever gained a third image.
+# - `shuffle=True` is needed, otherwise `random_state` is ignored and every seed gives the same split.
+# - Here `lesion_id` is unique per row, so the grouping doesn't really do anything. From what I understood, the real no-leak guarantee comes in `splits.assign_images`, where both photos of a lesion get the lesion's split. I still pass `groups=` so it stays correct if a lesion ever had a third image.
 
 # %% [markdown]
 # ### The property test
 #
-# Three properties, ten seeds: the splits are pairwise disjoint and together cover every
-# lesion; each split's size is within ±1 percentage point of what was requested; and the
-# same seed twice gives byte-identical lists. The per-seed table is printed first so the
-# evidence is visible, and the assertions follow it.
+# - For ten seeds I check:
+#   - the three splits don't overlap and together cover every lesion
+#   - each size is within ±1 pp of what I asked for
+#   - same seed twice → identical lists
+# - The per-seed table comes first, then the asserts.
 
 # %%
 SEEDS = [config.SEED, *range(9)]   # the project seed plus nine others
@@ -133,13 +117,10 @@ print(f"{len(SEEDS)} seeds: disjoint, complete, reproducible; "
 print("the same three assertions run as pytest in tests/test_splits.py")
 
 # %% [markdown]
-# ### Does the rare tail survive the split?
+# ### Do the rare classes survive the split?
 #
-# Disjointness and size are the easy properties. The one that decides whether the split
-# is *usable* is whether the rare classes reach validation and test at all: a class that
-# is absent from test has no recall to report. `splits.rare_class_coverage` re-splits
-# over the same ten seeds and counts, per class, how many runs place it in val, in test,
-# and in both.
+# - If a class isn't in test, there's no recall to report.
+# - `splits.rare_class_coverage` counts, over the same ten seeds, how often each rare class lands in val, in test, and in both.
 
 # %%
 RARE = ("MAL_OTH", "DF", "INF", "VASC", "BEN_OTH")
@@ -185,30 +166,12 @@ print(f"\none of {len(config.STRETCH_LABELS)} classes is {macro_share_pp:.1f}% o
       f"{macro_share_pp:.1f} pp")
 
 # %% [markdown]
-# **Answer.** The coverage table is a *negative* result in the useful sense: stratification
-# works, and it still does not save the rarest class. All five rare classes reach both
-# validation and test in 10 of 10 runs, so nothing is ever missing — but `MAL_OTH` arrives
-# with 1–2 lesions in val and 1–2 in test, out of its 9 in the whole dataset. Presence is
-# not evaluability.
+# **My answer**
 #
-# * **(i) `MAL_OTH` cannot be meaningfully evaluated at any split size.** Its per-class
-#   recall is a fraction with denominator 1 or 2, so it can only take the values 0.00 or
-#   1.00 (or 0.50 when two land in test). The 95% confidence intervals printed above show
-#   the damage: a perfect 1/1 still only supports [0.21, 1.00], a width of 0.79. That is a
-#   property of a 9-lesion class, not of the splitter — shrinking test to 5% would give
-#   0 or 1 lesions and make it worse, growing it to 30% would give 2–3 and barely help.
-# * **(ii) Keep it out of the headline number.** One class of eleven is 9.1% of a
-#   macro-average, so `MAL_OTH` alone can move macro-recall by 9.1 percentage points on
-#   the strength of one test lesion. Two models differing by less than that on macro-recall
-#   would be indistinguishable from seed noise. So: report macro metrics over the classes
-#   with usable support, and list `MAL_OTH` separately flagged *n<5, indicative only*.
-# * **(iii) If a number is genuinely required**, the instrument is repeated stratified
-#   cross-validation over many seeds (or nested CV), reporting the spread — a median and a
-#   range — not a point estimate. Even that is weak here: pooling all ten seeds accumulates
-#   only 13 `MAL_OTH` test lesions, and they are the *same* 9 lesions reused, so the repeats
-#   are correlated and the interval narrows less than the count suggests.
-# * **(iv) The deeper point.** A single train/val/test split is the wrong instrument for a
-#   class this rare, and no amount of stratification fixes a denominator of 1. The honest
-#   options are to merge `MAL_OTH` into a coarser "malignant, other" category, to treat it
-#   as an open-set / anomaly problem rather than a classification target, or to collect
-#   more of it. Reporting a recall of 1.00 on one lesion would be the least honest of them.
+# - All five rare classes are in both val and test in **10 of 10** runs, so stratification works.
+# - But `MAL_OTH` only gets 1–2 lesions in val and 1–2 in test (9 in the whole dataset). Being present doesn't mean I can evaluate it.
+# - **(i) I don't think `MAL_OTH` can be evaluated at any split size.** Recall with 1 or 2 test lesions can only be 0.00, 0.50 or 1.00. Even a perfect 1/1 has a 95% interval of [0.21, 1.00]. A bigger test set (30%) would still only give 2–3.
+# - **(ii) Keep it out of the headline number.** One class is 9.1% of a macro-average, so one lesion could move macro-recall by 9.1 pp. I'd report it separately, marked *n<5, indicative only*.
+# - **(iii) If I really needed a number:** repeated stratified CV over many seeds, reporting the spread. Even then it's the same 9 lesions every time (13 test appearances over ten seeds), so it helps less than it seems.
+# - **(iv) Overall:** one split is the wrong tool for a class this rare. Stratification can't fix a denominator of 1, and reporting "recall 1.00" on one lesion would be misleading.
+

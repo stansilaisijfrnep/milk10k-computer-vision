@@ -1,20 +1,17 @@
 # %% [markdown]
 # ## A3.3 Why StratifiedGroupKFold?
 #
-# Three 5-fold strategies, scored on the same data: `GroupKFold` (groups, no
-# stratification), `StratifiedKFold` (stratification, no groups) and
-# `StratifiedGroupKFold` (both). Each is judged on three things — how many lesions leak
-# across the fold boundary, how far any class's share drifts between validation folds,
-# and how many folds see no `MAL_OTH` at all (9 lesions in the whole dataset).
+# - Three 5-fold strategies on the same data:
+#   - `GroupKFold`: groups, no stratification
+#   - `StratifiedKFold`: stratification, no groups
+#   - `StratifiedGroupKFold`: both
+# - For each I measure: leaked lesions, the largest drift of a class share between val folds, and how many folds have no `MAL_OTH` (only 9 in the dataset).
 #
-# **Read the grain before reading the table.** (i) and (iii) cut the *lesion* table, where
-# a lesion is one row, so a lesion cannot be on both sides of a fold: their leak count is
-# 0 *by construction*, not by luck. (ii) cuts the *image* table, where each lesion is two
-# rows — that is exactly where the leak appears, and refusing to run it on images would
-# hide the failure we are testing for. To keep the comparison apples-to-apples, all three
-# are then scored at **image** level: each lesion-level fold assignment is pushed down to
-# the images that inherit it, so every strategy is measured on the same 10,480 rows a
-# model would actually train on.
+# **Check the level of the data first**
+#
+# - (i) and (iii) split the *lesion* table (1 row = 1 lesion), so they can't leak by construction.
+# - (ii) splits the *image* table (2 rows per lesion), which is exactly where a leak can happen.
+# - To compare fairly, I score all three at **image** level: each lesion's fold is passed down to its two images.
 
 # %%
 # The two grains, side by side, so the row counts in the comparison are unambiguous.
@@ -35,10 +32,8 @@ print()
 print(comparison.to_string(index=False))
 
 # %% [markdown]
-# The two lesion-level strategies are tied at 0 leaks, so the leak column cannot separate
-# them — the class-proportion spread and the rare-class coverage have to. Below, the folds
-# are recomputed from scratch and the per-fold composition is printed, so every number in
-# the summary table can be checked by hand instead of taken on trust.
+# - Both lesion-level strategies have 0 leaks, so the leak count can't tell them apart; the class drift and `MAL_OTH` coverage have to.
+# - I recompute the folds and print each fold's make-up so the table can be checked by hand.
 
 # %%
 import numpy as np
@@ -143,21 +138,16 @@ print(f"floor at lesion grain (1 lesion / fold): {200 / fold_size:.3f} pp")
 print(comparison[["strategy", "split_unit", "max_class_spread_pp"]].to_string(index=False))
 
 # %% [markdown]
-# Both stratified strategies sit exactly on their granularity floor: `StratifiedKFold`
-# reaches 0.048 pp, which is one image out of a 2,096-image fold, and
-# `StratifiedGroupKFold` reaches 0.095 pp, which is one *lesion* — the smallest unit it is
-# allowed to move. Neither is balancing better than the other; they are both perfect, and
-# the factor of two is the price of keeping a lesion whole. `GroupKFold` is 39x worse than
-# that floor at 3.72 pp, because nothing in it looks at the label.
-#
-# The honest caveat: `StratifiedKFold`'s 0.048 pp and its clean `MAL_OTH` coverage are
-# real, and taken alone they look like the best row in the table. They are worthless
-# anyway, because 79.4% of lesions have a near-duplicate photo on the other side of the
-# boundary — the validation score it produces measures memorisation of lesions.
+# - Both stratified strategies are as balanced as they can be:
+#   - `StratifiedKFold`: 0.048 pp = one image in a 2,096-image fold
+#   - `StratifiedGroupKFold`: 0.095 pp = one *lesion*, the smallest unit it can move
+# - `GroupKFold` is 39x worse at 3.72 pp, because it never looks at the label.
+# - On its own, `StratifiedKFold` looks like the best row. But I think it's useless: 79.4% of lesions have their other photo on the opposite side of the fold, so its val score partly measures memorisation.
 
 # %% [markdown]
-# **Answer (3 lines).**
+# **My answer (3 lines)**
 #
-# 1. I would use **StratifiedGroupKFold**: it is the only strategy with 0 leaked lesions *and* balanced folds (worst class spread 0.095 pp, the one-lesion floor) *and* `MAL_OTH` in all 5 validation folds.
-# 2. `GroupKFold` is also leak-free but ignores the label, so class shares drift by up to 3.72 pp (BKL 8.40% to 12.12%) and `MAL_OTH` is missing from 1 of 5 folds.
-# 3. `StratifiedKFold` balances best (0.048 pp) but puts the two images of 4,158 of 5,240 lesions (79.4%) in different folds, so its validation score rewards memorising lesions and is optimistic.
+# 1. I'd use **StratifiedGroupKFold**: it's the only one with 0 leaked lesions, balanced folds (0.095 pp, the one-lesion minimum) and `MAL_OTH` in all 5 val folds.
+# 2. `GroupKFold` doesn't leak either, but it ignores the label, so class shares drift up to 3.72 pp (BKL 8.40% to 12.12%) and `MAL_OTH` is missing from 1 of 5 folds.
+# 3. `StratifiedKFold` balances best (0.048 pp) but splits the two photos of 4,158 of 5,240 lesions (79.4%) across folds, so I think its val score is too optimistic.
+

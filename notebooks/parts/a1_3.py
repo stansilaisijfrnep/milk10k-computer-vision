@@ -1,34 +1,22 @@
 # %% [markdown]
 # ## A1.3 Build a lesion-level table
 #
-# The dataset ships on two different row grains. `metadata.csv` has one row per
-# **image**; `training_gt.csv` has one row per **lesion**. Every lesion was
-# photographed twice — once dermoscopically, once as a clinical close-up — so the
-# image table is exactly twice as long as the label table.
+# - `metadata.csv` = one row per **image**, `training_gt.csv` = one row per **lesion**.
+# - Each lesion has 2 photos (dermoscopic + clinical), so I put both image ids in one row:
+#   `lesion_id, derm_id, clinical_id, diagnosis_1, dx, age, sex, site`
 #
-# This exercise collapses the image grain onto the lesion grain and puts both image
-# ids of a lesion side by side in one row:
+# **Why I think the lesion level matters**
 #
-# `lesion_id, derm_id, clinical_id, diagnosis_1, dx, age, sex, site`
-#
-# **Why the lesion grain matters.** The lesion is the unit of *prediction* — the
-# clinical question is "is this mole malignant", not "is this photograph malignant".
-# It is therefore also the unit of *evaluation*: two predictions on the same lesion
-# are one decision, not two independent test cases, and scoring them separately
-# inflates the effective test-set size. Most importantly it is the unit the
-# train/val/test split must **group** on. The two photos of a lesion show the same
-# piece of skin on the same patient; putting one in train and the other in test
-# leaks the answer and buys accuracy that will not survive contact with a new
-# patient. Holding `derm_id` and `clinical_id` in the same row makes that mistake
-# structurally impossible — the smallest thing you can move between splits is a
-# whole lesion.
+# - It's what we predict: "is this lesion malignant", not "is this photo malignant".
+# - It's what we evaluate on: two photos of one lesion are one decision, not two test cases.
+# - It's what the split has to group on: one photo in train and the other in test would leak the answer.
+# - With both ids in the same row, the smallest thing I can move between splits is a whole lesion.
 
 # %% [markdown]
 # ### The table
 #
-# `data.build_lesion_table()` does the reshape. The logic lives in the package, not
-# in this notebook, so the split code and the dataloaders in Part B build the table
-# the same way rather than re-deriving it.
+# - `data.build_lesion_table()` does the reshape.
+# - It lives in the package so Part B builds the table exactly the same way.
 
 # %%
 lesions = data.build_lesion_table()
@@ -39,10 +27,9 @@ print()
 print(lesions.head().to_string(index=False))
 
 # %% [markdown]
-# ### The assertions, shown rather than hidden
+# ### The asserts
 #
-# `build_lesion_table()` asserts these internally, but a reader of the notebook
-# should see them pass on this data rather than take the function's word for it.
+# - The function checks these internally, but I want them visible here too.
 
 # %%
 checks = {
@@ -62,17 +49,10 @@ for name, passed in checks.items():
 assert all(checks.values()), [k for k, v in checks.items() if not v]
 
 # %% [markdown]
-# ### The reshape itself — no loop over rows
+# ### The reshape itself, without looping over rows
 #
-# The brief requires the two image ids to be brought together with
-# `pivot`/`unstack`/`groupby`, not with a Python loop. That requirement is the whole
-# point of the exercise, so it is worth seeing rather than trusting to a function
-# call. `image_type` is the only thing that distinguishes a lesion's two rows, so it
-# becomes the **column** axis and `isic_id` becomes the value.
-#
-# `unstack` is also a correctness check in disguise: it requires
-# `(lesion_id, image_type)` to be unique, so a lesion with two dermoscopic photos
-# would raise instead of silently keeping one of them.
+# - `image_type` is the only thing that differs between a lesion's two rows, so it becomes the columns and `isic_id` the value.
+# - `unstack` also acts as a check: if a lesion had two dermoscopic photos it would raise an error instead of silently keeping one.
 
 # %%
 meta = data.load_metadata()
@@ -117,8 +97,7 @@ assert matches, "the inline reshape disagrees with the package implementation"
 # %% [markdown]
 # ### Save it
 #
-# The table is written to CSV so that later work loads one fixed set of 5,240
-# lesions instead of rebuilding it and hoping the result is identical.
+# - I save it to CSV so later work loads the same fixed 5,240 lesions.
 
 # %%
 path = data.save_lesion_table(lesions)
@@ -129,15 +108,11 @@ print("rows on disk:", len(pd.read_csv(path)))
 # contents, so every section splits exactly these 5,240 rows.
 
 # %% [markdown]
-# **Answer.** The lesion table has 5,240 rows — one per lesion, exactly half the
-# 10,480 image rows — with columns `lesion_id, derm_id, clinical_id, diagnosis_1,
-# dx, age, sex, site`. It is built with a single `unstack` on `image_type` plus a
-# `groupby(...).first()` for the lesion-constant attributes: no Python loop over
-# rows anywhere. Every lesion has both a dermoscopic and a clinical close-up id
-# (no missing values in either column), `lesion_id` is unique, and the two id
-# columns are disjoint and together cover all 10,480 images. The inline reshape
-# above reproduces `data.build_lesion_table()` exactly (`.equals` is `True`), so
-# the package version is doing what the notebook claims. The table is saved to
-# `artifacts/tables/lesions.csv`; A3 obtains the identical table through the same
-# `data.build_lesion_table()` call and splits it — the split groups on `lesion_id`, which is only safe because both of a lesion's
-# images live in the same row.
+# **My answer**
+#
+# - 5,240 rows, one per lesion (exactly half of the 10,480 images), with columns `lesion_id, derm_id, clinical_id, diagnosis_1, dx, age, sex, site`.
+# - Built with one `unstack` on `image_type` + `groupby(...).first()`, no loops.
+# - No missing `derm_id` / `clinical_id`, no duplicate `lesion_id`, and the two id columns together cover all 10,480 images.
+# - My inline version matches `data.build_lesion_table()` exactly (`.equals` is `True`).
+# - Saved to `artifacts/tables/lesions.csv`; A3 gets the same table from the same function and splits it on `lesion_id`.
+

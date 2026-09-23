@@ -1,19 +1,12 @@
 # %% [markdown]
 # ## A3.1 Measure the leak
 #
-# Counting how many lesions a naive split puts on both sides of the train/test
-# line is easy. A count is not yet an argument: the question a grader will
-# ask is *what does the leak do to a number I would put in a report?* So this
-# section trains a real classifier and reads a real metric off it.
-#
-# The design is deliberately adversarial to my own conclusion. The model sees
-# **metadata only** — age, sex, body site, image type — and predicts
-# `diagnosis_1`. `min_samples_leaf=1` lets the forest memorise individual rows,
-# which is exactly the behaviour a leak is supposed to reward. Everything is
-# measured at **image** level, because that is the grain the leak lives at: a
-# lesion's two photographs are two rows, and a naive row-level split separates
-# them. Imputation and one-hot encoding sit inside a `Pipeline` so they are
-# fitted on train only and cannot themselves leak test information.
+# - Counting leaked lesions is easy; I want to see what the leak does to an actual metric.
+# - Setup:
+#   - Random Forest on **metadata only** (age, sex, site, image type) → `diagnosis_1`
+#   - `min_samples_leaf=1`, so it *can* memorise rows, which is exactly what a leak rewards
+#   - everything at **image** level, because that's where the leak happens (two photos = two rows)
+#   - imputation and encoding inside a `Pipeline`, so they're fitted on train only
 
 # %%
 import numpy as np
@@ -64,19 +57,15 @@ print(f"missing: age {int(X['age_approx'].isna().sum())}, "
 print(f"held out per scheme: {TEST_SIZE:.0%} | seeds {SEEDS}")
 
 # %% [markdown]
-# ### The two splitting schemes, and the three things measured on each
+# ### Two splits, three measurements
 #
-# * **(a) naive image-level** — `train_test_split` over the 10,480 rows,
-#   stratified on `diagnosis_1`, `lesion_id` never consulted.
-# * **(b) grouped by lesion** — `StratifiedGroupKFold` with `groups=lesion_id`;
-#   the first fold is the test set, so both schemes hold out the same 20%.
+# - **(a) naive:** `train_test_split` on the 10,480 images, stratified on `diagnosis_1`, ignoring `lesion_id`
+# - **(b) grouped:** `StratifiedGroupKFold` with `groups=lesion_id`; first fold = test (same 20%)
 #
-# On each split I measure (1) the Random Forest's balanced accuracy, (2) how
-# many test lesions also occur in train, and (3) the **sibling oracle**: a
-# predictor that, for each test image, returns the label of that lesion's other
-# photograph if that photograph is in train, and otherwise returns the majority
-# class of train. The oracle is not a model — it is a measuring instrument for
-# how much free signal the split hands over.
+# On each I measure:
+# 1. the Random Forest's balanced accuracy
+# 2. how many test lesions also appear in train
+# 3. a **sibling oracle**: predict each test image with the label of the lesion's other photo if it's in train, otherwise the majority class. It's not a model, just a way to measure how much free information the split gives away.
 
 # %%
 def make_model(seed: int) -> Pipeline:
@@ -159,7 +148,7 @@ per_seed = pd.DataFrame(records)
 print(per_seed.round(4).to_string(index=False))
 
 # %% [markdown]
-# ### Mean ± std over the five seeds
+# ### Mean ± std over five seeds
 
 # %%
 def mean_sd(frame: pd.DataFrame, column: str, digits: int = 3) -> pd.Series:
@@ -205,7 +194,7 @@ print(f"grouped-split oracle collapses to the constant "
       f"-> balanced accuracy exactly 1/{y.nunique()} = {1 / y.nunique():.3f}")
 
 # %% [markdown]
-# ### The picture: what the leak does to a weak model vs. what it makes possible
+# ### What the leak does to a weak model vs. what it makes possible
 
 # %%
 schemes = ["naive image-level", "grouped by lesion"]
@@ -247,29 +236,11 @@ ax.legend(loc="upper right")
 plt.show()
 
 # %% [markdown]
-# **Answer.** The leak did **not** inflate the Random Forest: balanced accuracy is
-# 0.426 ± 0.004 under the naive image-level split and 0.426 ± 0.003 under the
-# grouped one — a difference of -0.0001 points, so the honest split actually
-# scored a hair *higher* — even though the naive split puts 88.8% ± 0.7 of its
-# test lesions into train as well. That null result has a specific cause rather
-# than being a mystery: the model's whole feature set is age, sex, site and
-# image type, and the first three are *constant within a lesion*, so a leaked
-# sibling row carries nothing the forest could not already learn from other
-# patients with the same coarse demographics, and at 0.426 against a 0.333
-# chance level this feature set is so weak that there is barely anything to
-# memorise in the first place. The sibling oracle is the measurement that
-# matters, because it scores the leak's **potential** instead of one weak
-# model's ability to realise it: 79.8% ± 1.2 of naive test images have their
-# sibling sitting in train, and exploiting that alone reaches 0.847 ± 0.022,
-# against exactly 0.333 under the grouped split, where the sibling rate is 0%
-# and the oracle degenerates into always answering "Malignant" — a gap of
-# +0.514 balanced-accuracy points. That oracle score, reached with no model at all, says any model that
-# can recognise the *lesion* — a CNN looking at two photographs of the same
-# piece of skin taken minutes apart — can convert the leak into an almost free
-# correct answer; the gun is loaded, and this particular model simply cannot
-# pull the trigger. So "I measured no inflation" is not a licence to skip the
-# grouped split: I measured one weak model on one feature set, whereas the
-# split is a property of the *experiment*, not of the model, and it has to stay
-# valid for every model I try later — including the Milestone 2 CNN, which is
-# exactly the model able to exploit it — and I only get one honest look at the
-# test set, so I cannot decide to re-run it cleanly once I have already looked.
+# **My answer**
+#
+# - **Did the leak inflate the Random Forest? No.** 0.426 ± 0.004 naive vs 0.426 ± 0.003 grouped (difference −0.0001), even though 88.8% ± 0.7 of naive test lesions are also in train.
+# - **Why not, I think:** age, sex and site are the same on both photos of a lesion, so the leaked sibling adds nothing the forest couldn't learn from similar patients. And at 0.426 vs 0.333 chance, there's hardly anything to memorise anyway.
+# - **The oracle shows the real potential:** 79.8% ± 1.2 of naive test images have their sibling in train, and just copying its label gives **0.847 ± 0.022**, vs **0.333** with the grouped split (sibling rate 0%, it always says "Malignant").
+# - **What that means for a model that can recognise the lesion** (e.g. a CNN seeing two photos of the same skin): from what I understood, it could turn the leak into almost free correct answers. The leak is there; this weak model just can't use it.
+# - **Why "no inflation measured" is not a reason to skip the grouped split:** I only tested one weak model. The split belongs to the experiment, not the model, and it has to hold for the Milestone 2 CNN too — the model most able to exploit the leak. And I only get one honest look at the test set.
+

@@ -1,15 +1,11 @@
 # %% [markdown]
 # ## A3.6 A lesion-level `Dataset`
 #
-# The training loop consumes one *image* at a time, but the label, the split and
-# the clinical decision all live at *lesion* grain. Two pieces of
-# `milk10k.datasets` bridge that gap and this section tests both of them:
-# `LesionDataset`, which serves both photographs of one lesion as a single item,
-# and `aggregate_predictions`, which folds two per-image probability vectors back
-# into one prediction per lesion.
-#
-# Every claim below is asserted in code, so the section fails loudly instead of
-# printing a plausible-looking number.
+# - Training works on one *image* at a time, but the label, the split and the clinical decision are per *lesion*.
+# - Two parts of `milk10k.datasets` connect the two, and I test both:
+#   - `LesionDataset`: both photos of one lesion as one item
+#   - `aggregate_predictions`: turns two per-image predictions into one per lesion
+# - Everything is asserted, so the section fails loudly instead of printing a nice-looking wrong number.
 
 # %%
 import time
@@ -29,13 +25,11 @@ print(f"lesion table : {len(lesion_table):,} rows x {lesion_table.shape[1]} colu
 print(lesion_table.head(3).to_string(index=False))
 
 # %% [markdown]
-# ### (a) One batch, and the three things that can silently go wrong
+# ### (a) One batch, and three things that can go wrong silently
 #
-# A batch that is the right *shape* can still be wrong. The three failures worth
-# guarding against are: the ids drifting away from the labels (you would only
-# notice in the confusion matrix), a missing file being skipped instead of
-# raised (the dataset silently shrinks), and the two views sharing one draw of
-# the augmentation (the two-view branch sees half the diversity it should).
+# - ids no longer matching the labels (you'd only notice in the confusion matrix)
+# - a missing file being skipped instead of raising (the dataset quietly shrinks)
+# - both views getting the same augmentation draw
 
 # %%
 BATCH = 8
@@ -130,24 +124,18 @@ print(f"same photograph, train_transform : tensors differ, max |diff| = {gap:.3f
 print("real lesion,    train_transform : tensors differ (two photographs AND two draws)")
 
 # %% [markdown]
-# **What (a) shows.** The batch is `(8, 3, 224, 224)` per view with `float32`
-# tensors, an `int64` label tensor and a list of 8 ids, and ids and labels are
-# row-aligned with the lesion table. A missing file raises `FileNotFoundError`
-# naming the id. The transform fires once per view: feeding the *same*
-# photograph in as both views gives identical tensors under `eval_transform` and
-# different ones under `train_transform`. Independent application is the correct
-# choice here because the dermoscopic and clinical images are two different
-# photographs of the lesion, taken with different instruments at different
-# magnifications — forcing them to share a rotation or crop would assert a
-# geometric correspondence between them that does not exist.
+# **What (a) shows**
+#
+# - Batch is `(8, 3, 224, 224)` per view, `float32`; labels are `int64`; 8 ids, all matching the lesion table.
+# - A missing file raises `FileNotFoundError` with the id.
+# - Same photo as both views → identical with `eval_transform`, different with `train_transform`, so the transform runs once per view.
+# - Why I apply it independently: from what I understood, the dermoscopic and clinical images are two different photos (different instrument and zoom), so forcing the same rotation or crop on both makes no sense.
 
 # %% [markdown]
 # ### (b) One epoch over 800 lesions
 #
-# The check that matters for a training loop is conservation: after a full pass
-# with shuffling, the class counts the loader handed out must equal the class
-# counts of the table it was built from. Anything else means rows were dropped,
-# repeated or relabelled somewhere between the CSV and the batch.
+# - After a full shuffled pass, the class counts handed out must equal the class counts of the table.
+# - Otherwise rows were dropped, repeated or relabelled somewhere.
 
 # %%
 N_LESIONS = 800
@@ -195,23 +183,17 @@ assert comparison["table"].equals(comparison["loader"]), (
 print("\nevery lesion seen exactly once; class counts match the subset exactly.")
 
 # %% [markdown]
-# **What (b) shows.** Shuffling changes the order of an epoch and nothing else:
-# all 800 lesions appear exactly once and the three class counts are identical
-# to the subset's. `default_num_workers()` returns 0 on macOS on purpose —
-# worker processes are started with `spawn`, which re-imports the entry module
-# and hangs inside a Jupyter kernel — so the decoding happens in the main
-# process, and the timing above is the honest floor under a training epoch on
-# this machine.
+# **What (b) shows**
+#
+# - All 800 lesions appear exactly once and the class counts match the subset exactly. Shuffling only changes the order.
+# - `default_num_workers()` is 0 on macOS on purpose: worker processes use `spawn`, which hangs inside Jupyter. So the timing above is what one epoch costs on this machine without extra workers.
 
 # %% [markdown]
 # ### (c) Two views in, one prediction out
 #
-# `aggregate_predictions` averages a lesion's per-image probability vectors.
-# Testing it on real model output would only tell us the model's opinion, so the
-# probabilities here are synthetic and the right answer is computed by hand
-# first. Three cases: the two views agree, the two views disagree so that the
-# average flips the argmax away from the dermoscopic view, and a lesion with
-# only one view present.
+# - `aggregate_predictions` averages the two probability vectors of a lesion.
+# - I use synthetic probabilities where I computed the right answer by hand first.
+# - Three cases: views agree / views disagree and the average flips the answer / only one view present.
 
 # %%
 CLASSES = list(config.PRIMARY_LABELS)  # index == the integer label, from labels.py
@@ -278,24 +260,20 @@ print("  LES_FLIP     derm Benign, clinical Malignant -> Malignant   (n_views=2,
 print("  LES_ONE_VIEW one view only                   -> Indeterminate (n_views=1, unchanged)")
 
 # %% [markdown]
-# **What (c) shows.** The function returns one row per lesion with an `n_views`
-# column, so a half-observed lesion is visible in the results instead of looking
-# like a normal one. `LES_FLIP` is the case worth defending: the dermoscopic view
-# is mildly wrong (Benign at 0.60) and the clinical view confidently right
-# (Malignant at 0.95); a hard vote over the two labels is a 1–1 tie, while the
-# probability average lands at 0.65 Malignant and resolves towards the confident
-# view. That is why averaging probabilities beats voting on labels — the vote
-# throws away exactly the information that breaks the tie.
+# **What (c) shows**
+#
+# - One row per lesion, with an `n_views` column, so a lesion with only one photo stays visible.
+# - `LES_FLIP` is the interesting one: dermoscopic says Benign (0.60), clinical says Malignant (0.95).
+#   - voting on labels → 1–1 tie
+#   - averaging probabilities → 0.65 Malignant, following the confident view
+# - That's why I think averaging probabilities is better than voting: the vote throws away the confidence that breaks the tie.
 
 # %% [markdown]
 # ### (d) The unit of evaluation
 #
-# **Answer.** The lesion is the unit of evaluation: it is the object the clinical
-# decision is about, and the two photographs are two views of one lesion, not two
-# independent cases. Scoring per image double-counts every lesion, so the
-# effective sample size is half what the denominator claims and every confidence
-# interval comes out too narrow. It also hands out half credit for lesions the
-# model is inconsistent about — dermoscopic right and clinical wrong scores 50%
-# on a lesion whose real answer is "we do not know", which is not a clinical
-# outcome — and per-image scoring hides exactly the disagreement a clinician
-# would most want surfaced.
+# **My answer**
+#
+# - I think the unit of evaluation has to be the lesion, because that's what the clinical decision is about, and the two photos are two views of the same lesion, not two separate cases.
+# - Scoring per image counts every lesion twice, so the real sample size is half of what it looks like and the confidence intervals come out too narrow.
+# - It also gives "half credit" when one view is right and the other wrong, which isn't a real clinical outcome, and it hides exactly the disagreements a doctor would want to see.
+

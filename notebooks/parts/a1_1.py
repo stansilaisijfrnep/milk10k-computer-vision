@@ -1,12 +1,9 @@
 # %% [markdown]
 # ## A1.1 Cross-check the two label files
 #
-# `metadata.csv` (one row per **image**) and `training_gt.csv` (one row per **lesion**)
-# come from different parts of the MILK study pipeline, and every later step assumes they
-# describe the same universe and agree with each other. Below, five of those assumptions
-# are written as executable checks, run against the real data, and then re-run against
-# deliberately corrupted copies to show that each check can actually fail. A check that
-# can only pass is decoration.
+# - `metadata.csv` has one row per **image**, `training_gt.csv` one row per **lesion**.
+# - Everything later assumes they agree, so I check that first instead of trusting it.
+# - I also run each check on a deliberately broken copy, to make sure it can actually fail.
 
 # %%
 meta = data.load_metadata()
@@ -30,9 +27,8 @@ assert set(ONEHOT_COLS) == set(config.STRETCH_LABELS), "unexpected one-hot colum
 # %% [markdown]
 # ### The five checks
 #
-# Each check is a function of `(meta, gt)` returning `(passed, detail)`. Writing them as
-# functions rather than inline assertions is what makes the corruption test in the last
-# cell possible — the same code has to be runnable on data we know is broken.
+# - Each check is a small function `(meta, gt) -> (passed, detail)`.
+# - I wrote them as functions so I can re-run the same code on the broken data at the end.
 
 # %%
 # Fields that describe the lesion, not the photograph, and must therefore be identical
@@ -208,10 +204,10 @@ print(f"{'diagnosis_4':<12} -> {'diagnosis_3':<12} "
       f"{int((n_parents_4 > 1).sum())} with more than one diagnosis_3")
 
 # %% [markdown]
-# ### Would these checks notice if the data were broken?
+# ### Would the checks notice broken data?
 #
-# Each check is now re-run on a copy of the data with one targeted defect injected. A
-# check that does not change its verdict on the corrupted copy is not testing anything.
+# - I inject one defect per check and re-run it.
+# - If a check still says PASS on broken data, it isn't testing anything.
 
 # %%
 def corrupt_a(meta_df, gt_df):
@@ -281,11 +277,10 @@ print(f"   real data     : {check_c_code_to_diagnosis_1(meta, gt)[1]}")
 print(f"   corrupted copy: {check_c_code_to_diagnosis_1(*corrupt_c(meta, gt))[1]}")
 
 # %% [markdown]
-# ### Cross-check against the project package
+# ### Cross-check with the project package
 #
-# The same structural claims are implemented inside `milk10k.quality` and
-# `milk10k.labels`, which is what the pipeline and the data-quality report use. Two
-# independent implementations agreeing is worth more than one implementation asserting.
+# - The same checks also live in `milk10k.quality` and `milk10k.labels` (used by the pipeline).
+# - Two separate implementations giving the same answer makes me trust it more.
 
 # %%
 from milk10k import quality
@@ -305,24 +300,11 @@ print("Package and notebook agree on all "
       f"{ct.shape[0]} x {ct.shape[1]} code x diagnosis_1 counts.")
 
 # %% [markdown]
-# **Answer.** Ten of the eleven codes map to a single `diagnosis_1`; AKIEC is the sole
-# exception, splitting 123 Indeterminate against 180 Malignant, and — the sharper half of
-# the finding — all 123 Indeterminate lesions in the dataset are AKIEC, so that class has
-# exactly one source code. `diagnosis_1` therefore cannot be derived from an 11-class
-# prediction: for those 303 lesions, 5.8% of the 5,240, the code leaves the coarse label
-# undetermined, and they are the hardest cases precisely because AKIEC bundles actinic
-# keratosis with squamous cell carcinoma in situ, a genuine biological continuum rather
-# than a data-entry bug, which is why this project trains the two targets separately
-# instead of deriving one from the other. On any new medical dataset I would repeat all
-# five checks before training: ID-set equality between the label file and the image file,
-# one label per modelling unit, the fine-label-to-coarse-label crosstab, the nesting of
-# every taxonomy level, and the within-group constancy of every attribute I intend to
-# aggregate over. The most dangerous failure is the silent label corruption of (b) and
-# (e): a one-hot row with two positives, or a lesion whose two photographs carry
-# different diagnoses, trains the network on a flat contradiction with no error message
-# anywhere — `idxmax` simply returns the alphabetically first class, the loss still goes
-# down, and the damage only surfaces as unexplained ceiling error much later. A mismatch
-# in (a) is the next worst, because a lesion present in one file and missing from the
-# other changes the grouping key rather than crashing, and a broken grouping key puts one
-# photograph of a lesion in train and the other in test — leakage that inflates every
-# number in the report.
+# **My answer**
+#
+# - **What I found in (c):** 10 of the 11 codes map to one `diagnosis_1`, but AKIEC splits into 123 Indeterminate and 180 Malignant, and all 123 Indeterminate lesions are AKIEC.
+# - **What it means for the labels:** from what I understood, you can't derive `diagnosis_1` from an 11-class prediction, because for 303 lesions (5.8%) the code doesn't decide it — AKIEC covers a real continuum from actinic keratosis to carcinoma in situ, so I train the two targets separately.
+# - **What I'd repeat on any new medical dataset:** same IDs in both files, one label per unit, the fine-to-coarse crosstab, the taxonomy nesting, and that attributes are constant within a group.
+# - **Most dangerous failure, I think:** silent label corruption like (b) or (e), because a row with two positives or a lesion whose two photos disagree still trains fine — `idxmax` just picks one class and nothing errors.
+# - **Next worst:** a mismatch in (a), because it breaks the grouping key, which can put one photo of a lesion in train and the other in test and inflate every number.
+

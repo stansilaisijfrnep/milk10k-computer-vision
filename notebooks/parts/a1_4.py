@@ -1,9 +1,7 @@
 # %% [markdown]
 # ## A1.4 Task framing
 #
-# Before any modelling decision, the task has to be stated as a problem a clinic would
-# actually pose. The numbers the framing rests on are printed first, so the specification
-# below quotes the dataset rather than asserting things about it.
+# - I print the few numbers my framing relies on first, so it's based on the data.
 
 # %%
 from PIL import Image
@@ -50,27 +48,16 @@ for isic_id in meta["isic_id"]:
 print(f"distinct image sizes, all {len(meta):,} images: {sorted(sizes)}")
 
 # %% [markdown]
-# **Answer — problem specification.**
+# **My problem specification**
 #
-# **Input.** Both views of one lesion: dermoscopic image and clinical close-up. Metadata
-# is excluded in Milestone 1; several columns encode the label or postdate the biopsy.
+# - **Input:** both photos of a lesion (dermoscopic + clinical close-up). I leave metadata out for now, since some columns give away the label.
+# - **Output:** one prediction per lesion: Benign / Indeterminate / Malignant.
+# - **Who and when:** a dermatologist looking at a suspicious lesion and deciding whether to biopsy. I see it as a triage aid, not screening or an automatic diagnosis.
+# - **Metric:** sensitivity on Malignant at a fixed specificity, plus balanced accuracy and per-class recall. With 69.4% Malignant, always saying "Malignant" already gets 69.4% accuracy, so accuracy tells me nothing.
+# - **Costlier error:** a false negative. Missing a melanoma can kill; a false positive costs a biopsy and a scar.
+# - **Two differences from real use:**
+#   1. The data is biopsy-enriched (69.4% malignant, much higher than in a real clinic), so the model learns the wrong prior.
+#   2. All images are uniform 600x450 study captures and 60.6% of lesions are skin type III, so phone photos, other dermatoscopes or darker skin are outside what it saw.
 #
-# **Output.** One prediction per lesion: Benign / Indeterminate / Malignant.
-#
-# **User and moment.** A dermatologist examining a suspicious lesion and deciding whether
-# to biopsy: a triage aid, not population screening or autonomous diagnosis.
-#
-# **Metric.** Malignant sensitivity at a fixed, clinically acceptable specificity, with
-# balanced accuracy and per-class recall alongside. With 69.4% of lesions Malignant, a
-# constant "Malignant" predictor scores 69.4% accuracy, so accuracy measures nothing.
-#
-# **Costlier error.** The false negative: a missed melanoma can be fatal; a false
-# positive costs a biopsy and a scar.
-#
-# **Two gaps to deployment.** (i) Biopsy enrichment: 69.4% malignant here versus a small
-# minority in a real clinic, so the learned prior is wrong and precision collapses.
-# (ii) Acquisition and population: every image is a uniform 600x450 study capture and
-# 60.6% of lesions are skin-tone class III; phone photos, other dermatoscopes or darker
-# skin are out of distribution.
-#
-# (173 words including headings, counted with `wc -w`; limit 200)
+# (173 words, limit 200)
+
