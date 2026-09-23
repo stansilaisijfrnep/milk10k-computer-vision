@@ -11,6 +11,8 @@ seaborn>=0.13
 pillow>=10.0
 opencv-python-headless>=4.9      # headless: no GUI needed, smaller wheel
 
+scipy>=1.11                      # chi-square, ANOVA, Kruskal-Wallis (Session 2)
+
 # --- Modelling / splitting / metrics --------------------------------------
 scikit-learn>=1.4                # StratifiedGroupKFold, DummyClassifier, metrics
 torch>=2.2                       # Dataset / DataLoader / WeightedRandomSampler
