@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from . import config
+from . import config, preprocessing
 
 
 # --- Raw loaders -----------------------------------------------------------
@@ -52,13 +52,20 @@ def gt_to_label(gt: pd.DataFrame) -> pd.DataFrame:
     ``n_positive`` so the single-label assumption can be verified rather than
     assumed.
     """
-    codes = [c for c in gt.columns if c != "lesion_id"]
-    onehot = gt[codes]
+    # labels.py owns the one-hot -> code step for the whole project; this
+    # function only adds the exploratory columns around it. The import is local
+    # because labels.py imports this module, and a top-level import would make
+    # the two files circular.
+    from . import labels as labels_module
+
+    onehot = gt[config.STRETCH_LABELS]
 
     out = pd.DataFrame(
         {
             "lesion_id": gt["lesion_id"],
-            "label_11": onehot.idxmax(axis=1),
+            "label_11": labels_module.codes_from_onehot(gt),
+            # Measured, not assumed: the EDA's job is to *report* whether the
+            # one-hot really is single-label, so this counts rather than asserts.
             "n_positive": onehot.sum(axis=1),
         }
     )
@@ -174,14 +181,19 @@ def check_lesion_consistency(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # --- Image helpers ---------------------------------------------------------
+# Both helpers below are thin aliases. ``preprocessing`` owns reading images
+# from disk for the whole project — it knows about MILK10K_IMAGES_DIR overrides
+# and it raises an error that names the offending id. These names stay because
+# the Session 1 notebook and ``plots.py`` call them, but they must not become a
+# second implementation.
 def image_path(isic_id: str) -> Path:
-    """Absolute path to the JPEG for one image id."""
-    return config.IMG_DIR / f"{isic_id}.jpg"
+    """Absolute path to the JPEG for one image id (see ``preprocessing``)."""
+    return preprocessing.image_path(isic_id)
 
 
 def load_image(isic_id: str) -> Image.Image:
     """Open one image as RGB (guarantees 3 channels regardless of source file)."""
-    return Image.open(image_path(isic_id)).convert("RGB")
+    return preprocessing.load_image(isic_id)
 
 
 def sample_image_stats(
@@ -222,3 +234,128 @@ def sample_image_stats(
         )
 
     return pd.DataFrame(rows)
+
+
+# ===========================================================================
+# Milestone 1 / homework A1.3 — the lesion table
+# ===========================================================================
+# Everything below is appended for Milestone 1. It does not change any of the
+# functions above; it adds the one table the rest of the pipeline is built on.
+
+# The two literal values of ``image_type``. They are spelled out once here so
+# that a typo shows up as an immediate KeyError instead of a silently empty
+# column.
+DERMOSCOPIC_TYPE = "dermoscopic"
+CLINICAL_TYPE = "clinical: close-up"
+
+# Lesion-level attributes and the column names we want them under. These are
+# constant across a lesion's two images (asserted in check_lesion_consistency),
+# which is what makes a groupby-first legitimate here.
+_LESION_ATTRS = {
+    "diagnosis_1": "diagnosis_1",
+    "age_approx": "age",
+    "sex": "sex",
+    "anatom_site_general": "site",
+}
+
+LESION_TABLE_COLUMNS = [
+    "lesion_id", "derm_id", "clinical_id", "diagnosis_1", "dx",
+    "age", "sex", "site",
+]
+
+
+def build_lesion_table(
+    meta: pd.DataFrame | None = None,
+    gt: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """One row per lesion, with both of its image ids side by side.
+
+    This is the table the whole pipeline splits, weights and loads from. The
+    modelling unit is the *lesion*, not the image: a lesion contributes one
+    dermoscopic and one clinical close-up photo of the same piece of skin, so
+    putting one of them in train and the other in test would leak the answer.
+    Having ``derm_id`` and ``clinical_id`` in the same row makes that mistake
+    structurally impossible — you can only ever move a whole lesion.
+
+    The reshape is a ``pivot``: ``image_type`` is the thing that distinguishes
+    the two rows of a lesion, so it becomes the column axis and ``isic_id``
+    becomes the value. No Python loop over rows is involved, which matters
+    because a row loop over 10,480 rows is both slow and easy to get subtly
+    wrong. ``pivot`` also fails loudly if a lesion ever had two dermoscopic
+    images, because the (lesion_id, image_type) pair would no longer be unique.
+
+    Columns: lesion_id, derm_id, clinical_id, diagnosis_1, dx, age, sex, site.
+    ``dx`` is the 11-class code from ``training_gt.csv``; ``diagnosis_1`` is the
+    coarse 3-class target from ``metadata.csv``. On the shipped dataset the
+    result has 5,240 rows.
+    """
+    # Remember whether we loaded the shipped files ourselves: only then do we
+    # know the exact row count the result must have.
+    using_full_dataset = meta is None
+
+    meta = load_metadata() if meta is None else meta
+    gt = load_training_gt() if gt is None else gt
+
+    # --- The two image ids, one per column ---------------------------------
+    images = meta.pivot(index="lesion_id", columns="image_type", values="isic_id")
+    missing_types = [t for t in (DERMOSCOPIC_TYPE, CLINICAL_TYPE)
+                     if t not in images.columns]
+    if missing_types:
+        raise KeyError(f"image_type values not found in metadata: {missing_types}")
+
+    images = images[[DERMOSCOPIC_TYPE, CLINICAL_TYPE]]
+    images.columns = ["derm_id", "clinical_id"]
+    images = images.rename_axis(columns=None).reset_index()
+
+    # --- Lesion-level attributes -------------------------------------------
+    # "first" is safe because these columns do not vary within a lesion; it also
+    # skips NaN, so if only one of the two image rows carries an age we keep it.
+    attrs = (
+        meta.groupby("lesion_id", as_index=False)[list(_LESION_ATTRS)]
+        .first()
+        .rename(columns=_LESION_ATTRS)
+    )
+
+    # --- The 11-class code --------------------------------------------------
+    # Taken from labels.py rather than derived here: that module is the single
+    # owner of the target, and it also checks the single-positive assumption.
+    from . import labels as labels_module
+
+    labels = labels_module.lesion_labels(gt)
+
+    table = (
+        images.merge(attrs, on="lesion_id", how="left", validate="one_to_one")
+        .merge(labels, on="lesion_id", how="left", validate="one_to_one")
+    )
+    table = table[LESION_TABLE_COLUMNS]
+
+    # --- Assertions the rest of the project relies on ----------------------
+    assert table["lesion_id"].is_unique, "duplicate lesion_id in the lesion table"
+    assert len(table) == meta["lesion_id"].nunique(), (
+        "the pivot lost or invented lesions"
+    )
+    assert table["derm_id"].notna().all(), (
+        f"{int(table['derm_id'].isna().sum())} lesions have no dermoscopic image"
+    )
+    assert table["clinical_id"].notna().all(), (
+        f"{int(table['clinical_id'].isna().sum())} lesions have no clinical image"
+    )
+    if using_full_dataset:
+        assert len(table) == 5_240, f"expected 5,240 lesions, got {len(table):,}"
+
+    return table
+
+
+def save_lesion_table(
+    table: pd.DataFrame | None = None,
+    path: Path = config.LESION_TABLE_CSV,
+) -> Path:
+    """Write the lesion table to CSV so later milestones load it, not rebuild it.
+
+    Rebuilding is cheap, but committing the file means the splits, the class
+    weights and the dataloaders all provably refer to the same 5,240 lesions.
+    """
+    table = build_lesion_table() if table is None else table
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table.to_csv(path, index=False)
+    return path
