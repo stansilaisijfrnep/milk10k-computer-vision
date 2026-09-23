@@ -1,0 +1,33 @@
+{
+  "seed": 42,
+  "split_date": "2026-09-22",
+  "val_size": 0.15,
+  "test_size": 0.15,
+  "stratify_col": "dx",
+  "group_col": "lesion_id",
+  "dropped_leaky_columns": [
+    "concomitant_biopsy",
+    "diagnosis_2",
+    "diagnosis_3",
+    "diagnosis_4",
+    "diagnosis_confirm_type",
+    "melanocytic"
+  ],
+  "splits": {
+    "train": {
+      "n_lesions": 3667,
+      "n_images": 7334,
+      "file": "train.csv"
+    },
+    "val": {
+      "n_lesions": 786,
+      "n_images": 1572,
+      "file": "val.csv"
+    },
+    "test": {
+      "n_lesions": 787,
+      "n_images": 1574,
+      "file": "test.csv"
+    }
+  }
+}

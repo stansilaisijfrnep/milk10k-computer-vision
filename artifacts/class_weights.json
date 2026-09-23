@@ -1,0 +1,113 @@
+{
+  "generated_on": "2026-09-22",
+  "split_date": "2026-09-22",
+  "seed": 42,
+  "computed_on_split": "train",
+  "row_unit": "lesion",
+  "n_rows": 3667,
+  "note": "Weights are computed on the TRAIN split ONLY (lesion-level rows). Using val/test counts would leak the evaluation distribution into training.",
+  "schemes": {
+    "primary": {
+      "label_col": "diagnosis_1",
+      "classes": [
+        "Benign",
+        "Indeterminate",
+        "Malignant"
+      ],
+      "label_map": {
+        "Benign": 0,
+        "Indeterminate": 1,
+        "Malignant": 2
+      },
+      "counts": {
+        "Benign": 1036,
+        "Indeterminate": 88,
+        "Malignant": 2543
+      },
+      "imbalance_ratio": 28.898,
+      "weights": {
+        "balanced": {
+          "Benign": 1.1798584298584298,
+          "Indeterminate": 13.890151515151516,
+          "Malignant": 0.4806658801939966
+        },
+        "inverse_sqrt": {
+          "Benign": 0.5917843593370726,
+          "Indeterminate": 2.030495467307081,
+          "Malignant": 0.3777201733558462
+        }
+      }
+    },
+    "stretch": {
+      "label_col": "dx",
+      "classes": [
+        "AKIEC",
+        "BCC",
+        "BEN_OTH",
+        "BKL",
+        "DF",
+        "INF",
+        "MAL_OTH",
+        "MEL",
+        "NV",
+        "SCCKA",
+        "VASC"
+      ],
+      "label_map": {
+        "AKIEC": 0,
+        "BCC": 1,
+        "BEN_OTH": 2,
+        "BKL": 3,
+        "DF": 4,
+        "INF": 5,
+        "MAL_OTH": 6,
+        "MEL": 7,
+        "NV": 8,
+        "SCCKA": 9,
+        "VASC": 10
+      },
+      "counts": {
+        "AKIEC": 211,
+        "BCC": 1766,
+        "BEN_OTH": 31,
+        "BKL": 380,
+        "DF": 37,
+        "INF": 35,
+        "MAL_OTH": 7,
+        "MEL": 315,
+        "NV": 521,
+        "SCCKA": 332,
+        "VASC": 32
+      },
+      "imbalance_ratio": 252.286,
+      "weights": {
+        "balanced": {
+          "AKIEC": 1.5799224472210254,
+          "BCC": 0.18876763100998661,
+          "BEN_OTH": 10.75366568914956,
+          "BKL": 0.8772727272727273,
+          "DF": 9.00982800982801,
+          "INF": 9.524675324675325,
+          "MAL_OTH": 47.62337662337662,
+          "MEL": 1.0582972582972583,
+          "NV": 0.639853428720991,
+          "SCCKA": 1.004107338444688,
+          "VASC": 10.417613636363637
+        },
+        "inverse_sqrt": {
+          "AKIEC": 0.5540668536723254,
+          "BCC": 0.1915173165002957,
+          "BEN_OTH": 1.4455148265761062,
+          "BKL": 0.4128683571557705,
+          "DF": 1.3231300576447589,
+          "INF": 1.3604086206450918,
+          "MAL_OTH": 3.041966152939149,
+          "MEL": 0.45346954021503055,
+          "NV": 0.35260180879435593,
+          "SCCKA": 0.44170707504948414,
+          "VASC": 1.4227493908076345
+        }
+      }
+    }
+  }
+}

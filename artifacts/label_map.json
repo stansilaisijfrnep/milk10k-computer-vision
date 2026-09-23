@@ -1,0 +1,172 @@
+{
+  "created": "2026-09-22",
+  "seed": 42,
+  "n_lesions": 5240,
+  "primary": {
+    "column": "diagnosis_1",
+    "classes": {
+      "Benign": 0,
+      "Indeterminate": 1,
+      "Malignant": 2
+    },
+    "n_lesions": {
+      "Benign": 1483,
+      "Indeterminate": 123,
+      "Malignant": 3634
+    },
+    "strategy": "All three diagnosis_1 classes are kept. 'Indeterminate' (123 lesions, 2.3%) is a real clinical state - the pathologist could not commit - and those are precisely the lesions that warrant excision. Merging it into Benign would train the model to reassure on the ambiguous cases, and dropping it would silently narrow the task; its small size is handled with class weights and a balanced sampler, not by deletion."
+  },
+  "stretch": {
+    "column": "dx",
+    "classes": {
+      "AKIEC": 0,
+      "BCC": 1,
+      "BEN_OTH": 2,
+      "BKL": 3,
+      "DF": 4,
+      "INF": 5,
+      "MAL_OTH": 6,
+      "MEL": 7,
+      "NV": 8,
+      "SCCKA": 9,
+      "VASC": 10
+    },
+    "n_lesions": {
+      "AKIEC": 303,
+      "BCC": 2522,
+      "BEN_OTH": 44,
+      "BKL": 544,
+      "DF": 52,
+      "INF": 50,
+      "MAL_OTH": 9,
+      "MEL": 450,
+      "NV": 746,
+      "SCCKA": 473,
+      "VASC": 47
+    },
+    "rare_classes": [
+      "MAL_OTH",
+      "BEN_OTH",
+      "VASC",
+      "INF",
+      "DF"
+    ],
+    "rare_threshold_lesions": 100,
+    "strategy": "All 11 codes are kept. The five rare classes (MAL_OTH 9, BEN_OTH 44, VASC 47, INF 50, DF 52 lesions) are not merged into an 'other' bucket, because a bucket mixing malignant MAL_OTH with benign VASC/DF destroys the clinical meaning of the confusion matrix; they are handled with class weights and a WeightedRandomSampler instead. Honest caveat: MAL_OTH (9 lesions) cannot be evaluated reliably at any split size, so its per-class metrics must be reported as indicative only."
+  },
+  "code_to_diagnosis_1": {
+    "AKIEC": {
+      "diagnosis_1": "Indeterminate + Malignant",
+      "ambiguous": true,
+      "n_lesions": 303,
+      "n_by_diagnosis_1": {
+        "Benign": 0,
+        "Indeterminate": 123,
+        "Malignant": 180
+      }
+    },
+    "BCC": {
+      "diagnosis_1": "Malignant",
+      "ambiguous": false,
+      "n_lesions": 2522,
+      "n_by_diagnosis_1": {
+        "Benign": 0,
+        "Indeterminate": 0,
+        "Malignant": 2522
+      }
+    },
+    "BEN_OTH": {
+      "diagnosis_1": "Benign",
+      "ambiguous": false,
+      "n_lesions": 44,
+      "n_by_diagnosis_1": {
+        "Benign": 44,
+        "Indeterminate": 0,
+        "Malignant": 0
+      }
+    },
+    "BKL": {
+      "diagnosis_1": "Benign",
+      "ambiguous": false,
+      "n_lesions": 544,
+      "n_by_diagnosis_1": {
+        "Benign": 544,
+        "Indeterminate": 0,
+        "Malignant": 0
+      }
+    },
+    "DF": {
+      "diagnosis_1": "Benign",
+      "ambiguous": false,
+      "n_lesions": 52,
+      "n_by_diagnosis_1": {
+        "Benign": 52,
+        "Indeterminate": 0,
+        "Malignant": 0
+      }
+    },
+    "INF": {
+      "diagnosis_1": "Benign",
+      "ambiguous": false,
+      "n_lesions": 50,
+      "n_by_diagnosis_1": {
+        "Benign": 50,
+        "Indeterminate": 0,
+        "Malignant": 0
+      }
+    },
+    "MAL_OTH": {
+      "diagnosis_1": "Malignant",
+      "ambiguous": false,
+      "n_lesions": 9,
+      "n_by_diagnosis_1": {
+        "Benign": 0,
+        "Indeterminate": 0,
+        "Malignant": 9
+      }
+    },
+    "MEL": {
+      "diagnosis_1": "Malignant",
+      "ambiguous": false,
+      "n_lesions": 450,
+      "n_by_diagnosis_1": {
+        "Benign": 0,
+        "Indeterminate": 0,
+        "Malignant": 450
+      }
+    },
+    "NV": {
+      "diagnosis_1": "Benign",
+      "ambiguous": false,
+      "n_lesions": 746,
+      "n_by_diagnosis_1": {
+        "Benign": 746,
+        "Indeterminate": 0,
+        "Malignant": 0
+      }
+    },
+    "SCCKA": {
+      "diagnosis_1": "Malignant",
+      "ambiguous": false,
+      "n_lesions": 473,
+      "n_by_diagnosis_1": {
+        "Benign": 0,
+        "Indeterminate": 0,
+        "Malignant": 473
+      }
+    },
+    "VASC": {
+      "diagnosis_1": "Benign",
+      "ambiguous": false,
+      "n_lesions": 47,
+      "n_by_diagnosis_1": {
+        "Benign": 47,
+        "Indeterminate": 0,
+        "Malignant": 0
+      }
+    }
+  },
+  "ambiguous_codes": [
+    "AKIEC"
+  ]
+}

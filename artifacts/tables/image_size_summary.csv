@@ -1,0 +1,15 @@
+metric,value,note
+n_images,10480,"rows in the metadata, i.e. files expected"
+n_missing,0,referenced file not on disk
+n_unreadable,0,file present but the header failed to parse
+n_ok,10480,opened and verified successfully
+width_min,600.0,pixels
+width_median,600.0,pixels
+width_max,600.0,pixels
+height_min,450.0,pixels
+height_median,450.0,pixels
+height_max,450.0,pixels
+n_distinct_resolutions,1,1 means the dataset is dimensionally uniform
+most_common_resolution,600x450,100.0% of readable images
+frac_at_least_224,1.0,share with both sides >= 224px (the configured input size)
+frac_at_least_256,1.0,share with both sides >= 256px (the next common backbone resolution)

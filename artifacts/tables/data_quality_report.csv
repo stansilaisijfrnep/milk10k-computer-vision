@@ -1,0 +1,91 @@
+section,item,metric,value
+image_integrity,n_images,value,10480
+image_integrity,n_missing,value,0
+image_integrity,n_unreadable,value,0
+image_integrity,n_ok,value,10480
+image_integrity,width_min,value,600.0
+image_integrity,width_median,value,600.0
+image_integrity,width_max,value,600.0
+image_integrity,height_min,value,450.0
+image_integrity,height_median,value,450.0
+image_integrity,height_max,value,450.0
+image_integrity,n_distinct_resolutions,value,1
+image_integrity,most_common_resolution,value,600x450
+image_integrity,frac_at_least_224,value,1.0
+image_integrity,frac_at_least_256,value,1.0
+missing_values,anatom_site_special,n_missing,10274
+missing_values,anatom_site_special,pct_missing,98.034
+missing_values,anatom_site_special,decision,"Drop the column. 2% coverage cannot support a category level, and the few populated values duplicate anatom_site_general."
+missing_values,diagnosis_4,n_missing,8958
+missing_values,diagnosis_4,pct_missing,85.477
+missing_values,diagnosis_4,decision,"Leave as-is. Same reasoning as diagnosis_3: absence is information about the taxonomy depth, and it is a label column, never an input."
+missing_values,melanocytic,n_missing,8088
+missing_values,melanocytic,pct_missing,77.176
+missing_values,melanocytic,decision,"Leave the NaN as-is and DO NOT USE the column as a model input: it is derived from the diagnosis, so it leaks the label (see the leakage section). Imputing it would only make the leak look tidier."
+missing_values,anatom_site_general,n_missing,3912
+missing_values,anatom_site_general,pct_missing,37.328
+missing_values,anatom_site_general,decision,"Encode the NaN as an explicit 'unknown' category. At 37% the values are clearly not missing at random (some contributors simply never recorded a site), so mode-imputation would invent 37% of a feature."
+missing_values,diagnosis_3,n_missing,158
+missing_values,diagnosis_3,pct_missing,1.508
+missing_values,diagnosis_3,decision,"Leave as-is. NaN here means 'no finer level exists for this lesion' — structurally absent, not missing — and it is a label column, never an input."
+missing_values,age_approx,n_missing,40
+missing_values,age_approx,pct_missing,0.382
+missing_values,age_approx,decision,"Impute with the TRAIN-split median (never the full-data median, that would leak); add no missingness indicator — at 0.4% the flag would be almost constant and carries no usable signal."
+consistency,Every lesion has exactly 2 images,passed,True
+consistency,Every lesion has exactly 2 images,detail,"5,240 / 5,240 lesions"
+consistency,Each lesion has exactly one image of each type,passed,True
+consistency,Each lesion has exactly one image of each type,detail,"5,240 / 5,240 lesions; types present: ['clinical: close-up', 'dermoscopic']"
+consistency,lesion_id sets identical in metadata and training_gt,passed,True
+consistency,lesion_id sets identical in metadata and training_gt,detail,"5,240 metadata / 5,240 ground-truth; 0 only in metadata, 0 only in gt"
+consistency,Exactly one positive class per lesion in the one-hot,passed,True
+consistency,Exactly one positive class per lesion in the one-hot,detail,"5,240 / 5,240 rows; positives per row: [1]"
+consistency,'diagnosis_1' is constant within a lesion,passed,True
+consistency,'diagnosis_1' is constant within a lesion,detail,0 lesions with more than one value
+consistency,'age_approx' is constant within a lesion,passed,True
+consistency,'age_approx' is constant within a lesion,detail,0 lesions with more than one value
+consistency,'sex' is constant within a lesion,passed,True
+consistency,'sex' is constant within a lesion,detail,0 lesions with more than one value
+consistency,'anatom_site_general' is constant within a lesion,passed,True
+consistency,'anatom_site_general' is constant within a lesion,detail,0 lesions with more than one value
+consistency,isic_id is unique,passed,True
+consistency,isic_id is unique,detail,"10,480 unique / 10,480 rows"
+consistency,Every diagnosis_2 value maps to exactly one diagnosis_1,passed,True
+consistency,Every diagnosis_2 value maps to exactly one diagnosis_1,detail,0 of 19 distinct diagnosis_2 values have >1 parent
+consistency,Every diagnosis_3 value maps to exactly one diagnosis_2,passed,True
+consistency,Every diagnosis_3 value maps to exactly one diagnosis_2,detail,0 of 27 distinct diagnosis_3 values have >1 parent
+consistency,Every diagnosis_4 value maps to exactly one diagnosis_3,passed,True
+consistency,Every diagnosis_4 value maps to exactly one diagnosis_3,detail,0 of 15 distinct diagnosis_4 values have >1 parent
+crosstab_image_manipulation,altered,Benign,39.7
+crosstab_image_manipulation,altered,Indeterminate,12.84
+crosstab_image_manipulation,altered,Malignant,47.46
+crosstab_image_manipulation,altered,n_images,335
+crosstab_image_manipulation,instrument only,Benign,27.93
+crosstab_image_manipulation,instrument only,Indeterminate,2.0
+crosstab_image_manipulation,instrument only,Malignant,70.07
+crosstab_image_manipulation,instrument only,n_images,10145
+crosstab_image_type,clinical: close-up,Benign,28.3
+crosstab_image_type,clinical: close-up,Indeterminate,2.35
+crosstab_image_type,clinical: close-up,Malignant,69.35
+crosstab_image_type,clinical: close-up,n_images,5240
+crosstab_image_type,dermoscopic,Benign,28.3
+crosstab_image_type,dermoscopic,Indeterminate,2.35
+crosstab_image_type,dermoscopic,Malignant,69.35
+crosstab_image_type,dermoscopic,n_images,5240
+crosstab_diagnosis_confirm_type,histopathology,Benign,25.68
+crosstab_diagnosis_confirm_type,histopathology,Indeterminate,1.97
+crosstab_diagnosis_confirm_type,histopathology,Malignant,72.35
+crosstab_diagnosis_confirm_type,histopathology,n_images,10032
+crosstab_diagnosis_confirm_type,single contributor clinical assessment,Benign,87.05
+crosstab_diagnosis_confirm_type,single contributor clinical assessment,Indeterminate,10.71
+crosstab_diagnosis_confirm_type,single contributor clinical assessment,Malignant,2.23
+crosstab_diagnosis_confirm_type,single contributor clinical assessment,n_images,448
+leaky_columns,diagnosis_1,reason,It is the primary target itself.
+leaky_columns,diagnosis_2,reason,Finer level of the same label taxonomy as the target.
+leaky_columns,diagnosis_3,reason,Finer level of the same label taxonomy as the target.
+leaky_columns,diagnosis_4,reason,Finer level of the same label taxonomy as the target.
+leaky_columns,diagnosis_confirm_type,reason,"Records how the diagnosis was confirmed. A lesion goes to histopathology because a clinician already suspected malignancy, so this column encodes the clinical decision, not the image."
+leaky_columns,diagnosis_full,reason,Free-text form of the label.
+leaky_columns,invasion_thickness_interval,reason,Tumour thickness measured on the excised lesion — it exists only for lesions already diagnosed as invasive malignancies.
+leaky_columns,melanocytic,reason,"Derived from the diagnosis (whether the lesion is of melanocytic origin), so it is a coarse label in disguise."
+leaky_columns,concomitant_biopsy,reason,"Records that a biopsy was performed, which is again the clinician's suspicion rather than anything visible in the image."
+leaky_columns,lesion_id,reason,"An identifier, not a feature. It is the grouping key for the split; as an input it would let the model memorise individual lesions."
